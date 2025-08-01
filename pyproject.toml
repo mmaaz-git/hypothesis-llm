@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hypothesis-llm"
+version = "0.1.0"
+description = "Writing hypothesis property-based tests with LLMs"
+authors = [{name = "Muhammad Maaz", email = "m.maaz@mail.utoronto.ca"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "llm",
+    "rich",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+hypothesis-llm = "cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mmaaz-git/hypothesis-llm"
+Repository = "https://github.com/mmaaz-git/hypothesis-llm"
