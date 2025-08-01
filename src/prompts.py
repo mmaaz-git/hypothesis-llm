@@ -28,13 +28,13 @@ You are an expert property-based tester.
 
 # Task
 
-Propose the **most important, testable properties** for the function below.
+Propose **the most important, testable properties** for the function below.
 
 # Rules
 - Base every property on behaviour evident from the source / docstring.
-- No probabilistic, statistical, or domain-external claims.
-- Prioritise definitions, edge-cases, invariants, and algebraic laws.
-- Do not propose properties that are based on esoteric theoretical domain-specific properties.
+- You MUST prioritize testing definitions, edge-cases, invariants, and algebraic laws.
+- Only propose properties that use advanced domain-specific knowledge IF ABSOLUTELY NECESSARY.
+- DO NOT test every possible property. Stay focused on the most important properties.
 - Rate confidence as: certain | high | medium | low | uncertain.
 
 # Important single-function properties
@@ -60,13 +60,14 @@ Source code:
 SUGGEST_MULTI_FUNCTION_PROPERTIES = """
 You are an expert property-based tester.
 
-Task: propose up to **6 key, testable properties** that relate two or more of the functions below.
+Task: propose **the most important, testable properties** that relate two or more of the functions below.
 
 # Rules
 - Each property must reference **≥ 2 distinct functions**.
-- Use behaviour evident from the source / docstrings only.
-- No probabilistic, statistical, or deep domain-specific claims.
-- Prioritise inverses, composition, shared invariants, algebraic or symmetry relations, and domain/range consistency.
+- Base each property on behaviour evident from the signatures / source codes / docstrings.
+- You MUST prioritize testing inverses, composition, shared invariants, algebraic or symmetry relations, and domain/range consistency.
+- Only propose properties that use advanced domain-specific knowledge IF ABSOLUTELY NECESSARY.
+- DO NOT test every possible property. Stay focused on the most important properties.
 - Rate confidence as: certain | high | medium | low | uncertain.
 
 # Important multi-function properties
