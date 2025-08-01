@@ -1,0 +1,415 @@
+{
+  "module_name": "statistics",
+  "single_function_properties": {
+    "mean": [
+      {
+        "property": "Arithmetic Mean Formula: mean(data) = (sum of all elements) / (number of elements)",
+        "reasoning": "This is the mathematical definition of arithmetic mean. The function should return exactly (x\u2081 + x\u2082 + ... + x\u2099) / n for input [x\u2081, x\u2082, ..., x\u2099].",
+        "confidence": "certain"
+      },
+      {
+        "property": "Commutativity: mean([a, b, c]) = mean([b, a, c]) = mean([c, b, a])",
+        "reasoning": "The arithmetic mean is invariant under permutation of input elements since addition is commutative and order doesn't affect the sum or count.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Empty Input Exception: mean([]) raises StatisticsError",
+        "reasoning": "Division by zero is undefined, and the docstring explicitly states this behavior. The source code checks n < 1 and raises StatisticsError.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Single Element Identity: mean([x]) = x",
+        "reasoning": "For a single element, the sum is x and count is 1, so x/1 = x. This is a fundamental property of arithmetic mean.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Constant Value Property: mean([c, c, c, ..., c]) = c",
+        "reasoning": "If all elements are the same constant c, then sum = n*c and mean = (n*c)/n = c. This follows directly from the definition.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Linear Transformation: mean([k*x\u2081, k*x\u2082, ..., k*x\u2099]) = k * mean([x\u2081, x\u2082, ..., x\u2099])",
+        "reasoning": "Scaling all elements by constant k scales the sum by k, so the mean is also scaled by k. This is a fundamental property of arithmetic mean.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Translation Property: mean([x\u2081+c, x\u2082+c, ..., x\u2099+c]) = mean([x\u2081, x\u2082, ..., x\u2099]) + c",
+        "reasoning": "Adding constant c to all elements adds n*c to the sum, so mean increases by (n*c)/n = c. This is a well-known property of arithmetic mean.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Boundedness: min(data) \u2264 mean(data) \u2264 max(data)",
+        "reasoning": "The arithmetic mean must lie between the minimum and maximum values in the dataset. This follows from the convex combination property of arithmetic mean.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Type Preservation: Return type should match or be compatible with input element types",
+        "reasoning": "The examples show Fraction inputs returning Fraction, Decimal inputs returning Decimal. The _convert function likely handles type preservation based on input type T.",
+        "confidence": "high"
+      },
+      {
+        "property": "Monotonicity under element replacement: If a < b, then replacing a with b in the dataset increases the mean",
+        "reasoning": "Replacing a smaller value with a larger one increases the sum while keeping count constant, thus increasing the mean. This follows from the linear nature of arithmetic mean.",
+        "confidence": "high"
+      },
+      {
+        "property": "Concatenation Property: mean(list1 + list2) = (len(list1)*mean(list1) + len(list2)*mean(list2)) / (len(list1) + len(list2))",
+        "reasoning": "This is the weighted average formula when combining two datasets. The combined mean is the weighted average of individual means, weighted by their respective sizes.",
+        "confidence": "high"
+      },
+      {
+        "property": "Numerical Stability: Should handle large datasets and extreme values without overflow/underflow when mathematically valid",
+        "reasoning": "The _sum helper function likely implements numerically stable summation. For a statistics function, numerical stability is important for practical use.",
+        "confidence": "medium"
+      },
+      {
+        "property": "Mixed Numeric Type Handling: Should handle lists with mixed numeric types (int, float, Fraction, Decimal) appropriately",
+        "reasoning": "The _sum and _convert functions suggest support for mixed types, but the exact behavior depends on implementation details not fully visible in the provided code.",
+        "confidence": "medium"
+      }
+    ],
+    "median": [
+      {
+        "property": "Order Independence: median(data) = median(permutation(data)) for any permutation",
+        "reasoning": "The median function sorts the input data before processing, so the output should be identical regardless of the initial order of elements. This is fundamental to the definition of median as a positional statistic.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Bounded Property: min(data) \u2264 median(data) \u2264 max(data)",
+        "reasoning": "By definition, the median is either a middle element (odd case) or average of two middle elements (even case) from the sorted array. In both cases, it must fall within the range of the data values.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Singleton Identity: median([x]) = x for any numeric value x",
+        "reasoning": "For a single element, that element is by definition the middle value, so the median should return that exact element.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Odd Length Property: For odd n, median(data) \u2208 data (returns actual data point)",
+        "reasoning": "The implementation shows that for odd-length arrays, it returns data[n//2], which is an actual element from the input array.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Even Length Property: For even n, median(data) = (data[n/2-1] + data[n/2]) / 2 in sorted order",
+        "reasoning": "The implementation explicitly calculates the average of the two middle elements for even-length arrays, which is the standard definition of median for even datasets.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Empty Data Exception: median([]) raises StatisticsError",
+        "reasoning": "The implementation explicitly checks for empty data and raises StatisticsError, as median is undefined for empty datasets.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Monotonicity: If data1 \u2264 data2 (elementwise), then median(data1) \u2264 median(data2)",
+        "reasoning": "Since median depends only on the middle elements of sorted data, if all elements of one dataset are \u2264 corresponding elements of another, the median should follow the same relationship.",
+        "confidence": "high"
+      },
+      {
+        "property": "Duplicate Invariance: median(data) = median(data + duplicates of existing elements)",
+        "reasoning": "Adding duplicate values that already exist shouldn't change the median, as it only affects the position but not the value of middle elements in most cases. However, this can be complex with even/odd length changes.",
+        "confidence": "medium"
+      },
+      {
+        "property": "Translation Invariance: median(data + c) = median(data) + c for constant c",
+        "reasoning": "Adding a constant to all elements should shift the median by the same constant, as it's a linear transformation that preserves order and relative positions.",
+        "confidence": "high"
+      },
+      {
+        "property": "Scale Invariance: median(k * data) = k * median(data) for positive constant k",
+        "reasoning": "Multiplying all elements by a positive constant should scale the median by the same factor, preserving the relative position property.",
+        "confidence": "high"
+      },
+      {
+        "property": "Reflection Property: median(-data) = -median(data)",
+        "reasoning": "Negating all elements reverses the order but the median should be the negation of the original median due to symmetry.",
+        "confidence": "high"
+      },
+      {
+        "property": "Robustness to Outliers: Changing extreme values beyond existing min/max doesn't change median (for n\u22653)",
+        "reasoning": "Median is known to be robust to outliers because it only depends on middle values, not extreme values. However, this depends on having enough elements.",
+        "confidence": "medium"
+      }
+    ],
+    "mode": [
+      {
+        "property": "Result must be element of input: mode(data) \u2208 data (for non-empty data)",
+        "reasoning": "The mode function returns the most common element from the input data. By definition, it cannot return an element that wasn't in the original dataset. This is a fundamental constraint of the mode operation.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Empty input raises exception: mode([]) raises StatisticsError",
+        "reasoning": "The docstring explicitly states this behavior, and mathematically the mode is undefined for empty sets. The function implements this by catching IndexError and raising StatisticsError.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Single element invariant: mode([x]) = x",
+        "reasoning": "If the dataset contains only one element, that element is trivially the most frequent (and only) element, so it must be the mode. This is a basic identity property.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Order invariance (commutativity): mode(data) = mode(permutation(data)) when there's a unique mode",
+        "reasoning": "The mode should depend only on the frequency of elements, not their order in the input. However, when there are ties, the function returns the first encountered element, so this only holds when there's a unique most frequent element.",
+        "confidence": "high"
+      },
+      {
+        "property": "Frequency preservation: if x = mode(data), then count(x, data) \u2265 count(y, data) for all y \u2208 data",
+        "reasoning": "This is the mathematical definition of mode - it's the element(s) with maximum frequency. The returned element must have frequency greater than or equal to all other elements.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Tie-breaking consistency: mode([a,a,b,b]) returns the first occurrence of a tied element",
+        "reasoning": "The docstring explicitly states this behavior with an example. When multiple elements have the same maximum frequency, the function returns the one encountered first in the iteration order.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Duplication irrelevance for unique mode: if x appears more than any other element, then mode(data) = mode(data + [x,x,...,x])",
+        "reasoning": "Adding more copies of an already uniquely most frequent element shouldn't change the result, as it remains the most frequent. This follows from the definition of mode.",
+        "confidence": "high"
+      },
+      {
+        "property": "Type preservation: type(mode(data)) = type(elements in data)",
+        "reasoning": "Since the mode returns an actual element from the input data, it must preserve the type of the input elements. The function doesn't perform any type conversion.",
+        "confidence": "high"
+      },
+      {
+        "property": "Non-associativity: mode(mode([A]), [B]) is generally not defined or meaningful",
+        "reasoning": "Unlike arithmetic operations, mode is not associative. You cannot meaningfully combine modes of subsets to get the mode of the union, as frequency information is lost. The mode of a single element plus another dataset doesn't follow standard associative patterns.",
+        "confidence": "high"
+      },
+      {
+        "property": "Subset property violation: mode(subset) may not equal mode(superset)",
+        "reasoning": "The mode of a subset can differ from the mode of the full dataset because removing elements can change relative frequencies. For example, mode([1,1,2,2,2]) = 2, but mode([1,1]) = 1.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Monotonicity absence: adding elements can change the mode arbitrarily",
+        "reasoning": "Unlike measures like minimum or maximum, the mode doesn't exhibit monotonic behavior when elements are added. Adding new elements can completely change which element is most frequent.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Idempotency for single-mode datasets: if data has unique mode x, then mode(data + data) = x",
+        "reasoning": "Duplicating a dataset where one element is uniquely most frequent will preserve that element as the unique mode, since all frequencies double proportionally.",
+        "confidence": "high"
+      }
+    ],
+    "stdev": [
+      {
+        "property": "Non-negativity: stdev(data) \u2265 0 for all valid inputs",
+        "reasoning": "Standard deviation is defined as the square root of variance, and square roots of real numbers are non-negative. This is a fundamental mathematical property.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Zero standard deviation iff all elements equal: stdev(data) = 0 \u27fa all elements in data are equal",
+        "reasoning": "Standard deviation measures spread/dispersion. It equals zero if and only if there is no variation in the data, which occurs when all values are identical.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Scale invariance with absolute value: stdev(k*data) = |k| * stdev(data) for scalar k \u2260 0",
+        "reasoning": "When scaling data by a constant, the standard deviation scales by the absolute value of that constant. This follows from the definition of standard deviation and how variance transforms under scaling.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Translation invariance: stdev(data + k) = stdev(data) for scalar k",
+        "reasoning": "Adding a constant to all data points shifts the mean by the same amount, leaving deviations from mean unchanged. Standard deviation measures spread around the mean, so it's invariant under translation.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Minimum sample size requirement: Function raises StatisticsError when len(data) < 2",
+        "reasoning": "The code explicitly checks 'if n < 2' and raises StatisticsError. Sample standard deviation requires at least 2 points to calculate the denominator (n-1) in Bessel's correction.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Order invariance: stdev(data) = stdev(permutation(data)) for any permutation",
+        "reasoning": "Standard deviation depends only on the values and their deviations from the mean, not on the order of elements. The calculation involves sums that are commutative.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Upper bound by range: stdev(data) \u2264 (max(data) - min(data))/2 * sqrt((n-1)/n) where n = len(data)",
+        "reasoning": "For sample standard deviation, the maximum spread occurs when data is split between two extreme values. The exact bound involves the sample size correction factor.",
+        "confidence": "high"
+      },
+      {
+        "property": "Consistency with variance: stdev(data) = sqrt(variance(data)) where variance uses same sample correction",
+        "reasoning": "By definition, standard deviation is the square root of variance. The code structure suggests it uses the same _ss helper function as variance with (n-1) denominator.",
+        "confidence": "high"
+      },
+      {
+        "property": "Monotonicity under data spread: If data2 is more spread out than data1 (same mean, larger deviations), then stdev(data2) > stdev(data1)",
+        "reasoning": "Standard deviation measures dispersion, so data with larger deviations from the mean should have larger standard deviation. However, this requires careful definition of 'more spread out'.",
+        "confidence": "high"
+      },
+      {
+        "property": "Robustness to xbar parameter: If xbar equals the true sample mean of data, stdev(data, xbar) = stdev(data, None)",
+        "reasoning": "The xbar parameter appears to allow specifying a custom mean. When it equals the actual sample mean, results should be identical to the default calculation.",
+        "confidence": "medium"
+      },
+      {
+        "property": "Subadditivity property: stdev(concatenate(data1, data2)) \u2264 stdev(data1) + stdev(data2) under certain conditions",
+        "reasoning": "This is related to triangle inequality concepts, but standard deviation doesn't generally satisfy simple subadditivity. The relationship is complex and depends on the relationship between the datasets.",
+        "confidence": "low"
+      },
+      {
+        "property": "Effect of outliers: Adding an outlier to data increases stdev(data) unless the outlier equals the mean",
+        "reasoning": "Outliers generally increase standard deviation because they increase the sum of squared deviations. However, the exact effect depends on how the outlier changes the mean and the relative magnitudes.",
+        "confidence": "medium"
+      }
+    ],
+    "variance": [
+      {
+        "property": "Non-negativity: variance(data, xbar) \u2265 0 for all valid inputs",
+        "reasoning": "Sample variance is mathematically defined as the average of squared deviations from the mean. Since squares are always non-negative and we're dividing by a positive number (n-1), the result must be non-negative. This is a fundamental mathematical property of variance.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Zero variance for constant data: variance([c, c, ..., c]) = 0 for any constant c",
+        "reasoning": "When all data points are identical, every deviation from the mean is zero, so all squared deviations are zero. The sum of zeros divided by (n-1) equals zero. This follows directly from the mathematical definition of variance.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Translation invariance: variance([x\u2081+k, x\u2082+k, ..., x\u2099+k]) = variance([x\u2081, x\u2082, ..., x\u2099]) for any constant k",
+        "reasoning": "Adding a constant to all data points shifts the mean by the same constant, so the deviations from the mean remain unchanged. This is a fundamental property of variance in statistics - it measures spread, not location.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Scale transformation: variance([k*x\u2081, k*x\u2082, ..., k*x\u2099]) = k\u00b2*variance([x\u2081, x\u2082, ..., x\u2099]) for any constant k",
+        "reasoning": "When data is scaled by factor k, the mean scales by k, and each deviation scales by k. Since variance involves squared deviations, the result scales by k\u00b2. This is a fundamental property of variance.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Consistent result when xbar parameter matches actual mean: variance(data, mean(data)) = variance(data, None)",
+        "reasoning": "The docstring explicitly states that xbar should be the mean of data when provided. When this condition is met, both calls should produce identical results since they're computing the same mathematical quantity.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Order invariance: variance([x\u2081, x\u2082, ..., x\u2099]) = variance([x\u209a\u208d\u2081\u208e, x\u209a\u208d\u2082\u208e, ..., x\u209a\u208d\u2099\u208e]) for any permutation p",
+        "reasoning": "Variance depends only on the values and their frequencies, not their order in the sequence. The mathematical formula involves summing squared deviations, which is commutative.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Minimum sample size requirement: function raises StatisticsError when len(data) < 2",
+        "reasoning": "The source code explicitly checks 'if n < 2' and raises StatisticsError. Sample variance requires at least 2 points because the denominator is (n-1), and we need at least one degree of freedom.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Bessel's correction applied: uses (n-1) denominator instead of n for sample variance",
+        "reasoning": "The source code shows 'ss / (n - 1)', which is the standard Bessel's correction for sample variance. This distinguishes it from population variance and provides an unbiased estimator.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Type preservation: return type matches the numeric type of input data when possible",
+        "reasoning": "The docstring shows examples with Decimal and Fraction inputs producing Decimal and Fraction outputs respectively. The _convert function appears to handle type preservation, which is important for maintaining precision.",
+        "confidence": "high"
+      },
+      {
+        "property": "Monotonic relationship with spread: more spread out data tends to have higher variance",
+        "reasoning": "While not strictly monotonic in all cases, variance generally increases as data points become more dispersed from the mean. This is the fundamental purpose of variance as a measure of spread.",
+        "confidence": "high"
+      },
+      {
+        "property": "Robustness to duplicate values: variance handles repeated values correctly",
+        "reasoning": "The examples show data with repeated values (1.25 appears twice), and mathematically there's no reason duplicates would cause issues. Each value contributes to the sum regardless of repetition.",
+        "confidence": "high"
+      },
+      {
+        "property": "Finite result for finite input: variance(data) is finite when all elements in data are finite real numbers",
+        "reasoning": "Given finite inputs, the arithmetic operations (subtraction, squaring, division) will produce finite results. However, implementation details like floating-point overflow could theoretically cause issues with extreme values.",
+        "confidence": "medium"
+      },
+      {
+        "property": "Sensitivity to outliers: extreme values disproportionately increase variance",
+        "reasoning": "Since variance involves squared deviations, outliers (values far from the mean) contribute quadratically to the result. This is a known characteristic of variance but the degree depends on the specific data.",
+        "confidence": "medium"
+      },
+      {
+        "property": "Computational stability: providing correct xbar improves numerical accuracy",
+        "reasoning": "When xbar is pre-computed with higher precision, it could reduce floating-point errors in the variance calculation. However, this depends on implementation details and the specific numerical methods used.",
+        "confidence": "low"
+      }
+    ]
+  },
+  "multi_function_properties": [
+    {
+      "property": "stdev(data) = \u221avariance(data)",
+      "reasoning": "The stdev function is explicitly documented as returning the square root of the sample variance, and both functions use the same underlying _ss helper function to calculate sum of squares. The source code shows stdev computes sqrt(ss/(n-1)) while variance computes ss/(n-1), making this a definitional relationship.",
+      "functions_involved": [
+        "stdev",
+        "variance"
+      ],
+      "confidence": "certain"
+    },
+    {
+      "property": "variance(data, mean(data)) = variance(data)",
+      "reasoning": "The variance function accepts an optional xbar parameter which should be the mean of the data. When provided, it uses this value instead of recalculating the mean internally. The documentation explicitly states this relationship and shows an example where m = mean(data) and variance(data, m) equals variance(data).",
+      "functions_involved": [
+        "variance",
+        "mean"
+      ],
+      "confidence": "certain"
+    },
+    {
+      "property": "stdev(data, mean(data)) = stdev(data)",
+      "reasoning": "Similar to variance, stdev accepts an optional xbar parameter. Since stdev internally calls the same _ss function as variance with the xbar parameter, providing the mean should yield the same result as letting it calculate the mean internally.",
+      "functions_involved": [
+        "stdev",
+        "mean"
+      ],
+      "confidence": "high"
+    },
+    {
+      "property": "For symmetric unimodal distributions: mode(data) \u2248 median(data) \u2248 mean(data)",
+      "reasoning": "In perfectly symmetric unimodal distributions, all three measures of central tendency converge to the same value. However, this is a statistical property that depends on the data distribution rather than a mathematical certainty for arbitrary datasets.",
+      "functions_involved": [
+        "mean",
+        "median",
+        "mode"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "property": "variance(data) \u2265 0, with equality iff all elements in data are equal to mean(data)",
+      "reasoning": "Variance measures the average squared deviation from the mean, so it's always non-negative. It equals zero only when all data points are identical to the mean, which happens when all data points are the same value.",
+      "functions_involved": [
+        "variance",
+        "mean"
+      ],
+      "confidence": "certain"
+    },
+    {
+      "property": "stdev(data) \u2265 0, with equality iff all elements in data are equal to mean(data)",
+      "reasoning": "Since standard deviation is the square root of variance, and square root preserves the non-negativity and zero conditions, this follows directly from the variance property.",
+      "functions_involved": [
+        "stdev",
+        "mean"
+      ],
+      "confidence": "certain"
+    },
+    {
+      "property": "For datasets with no repeated values: mode raises StatisticsError or returns arbitrary first occurrence",
+      "reasoning": "When all values appear exactly once, there's no clear statistical mode. The implementation returns the first occurrence based on Counter's behavior, but this is more of an implementation detail than a meaningful statistical relationship.",
+      "functions_involved": [
+        "mode"
+      ],
+      "confidence": "low"
+    },
+    {
+      "property": "stdev([constant] * n) = 0 and variance([constant] * n) = 0 and mean([constant] * n) = constant",
+      "reasoning": "For a dataset where all values are the same constant, the mean equals that constant, and there's no variation, so both variance and standard deviation are zero. This demonstrates how these functions relate for constant datasets.",
+      "functions_involved": [
+        "mean",
+        "variance",
+        "stdev"
+      ],
+      "confidence": "certain"
+    },
+    {
+      "property": "For single-element datasets: mean([x]) = median([x]) = mode([x]) = x",
+      "reasoning": "When there's only one data point, all measures of central tendency must equal that single value by definition.",
+      "functions_involved": [
+        "mean",
+        "median",
+        "mode"
+      ],
+      "confidence": "certain"
+    }
+  ]
+}
