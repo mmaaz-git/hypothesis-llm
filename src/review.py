@@ -21,14 +21,11 @@ async def _review_single_test(test_info: dict, pytest_result: dict, model_name: 
     # Build context from pytest results
     status = pytest_result.get('status', 'UNKNOWN')
     failure_message = pytest_result.get('failure_message', '').strip()
-    falsifying_example = pytest_result.get('falsifying_example', '').strip()
 
     if status == 'PASSED':
         pytest_context = "✅ This test PASSED successfully."
     elif status == 'FAILED':
         pytest_context = f"❌ This test FAILED.\n\nFailure details:\n{failure_message}"
-        if falsifying_example:
-            pytest_context += f"\n\n{falsifying_example}"
     elif status == 'ERROR':
         pytest_context = f"💥 This test had an ERROR.\n\nError details:\n{failure_message}"
     else:
