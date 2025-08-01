@@ -104,7 +104,7 @@ It will output a JSON file with the suggestions. The JSON will have the followin
     "test_file": "test_file.py",
     "reviews": {
         "test_function_name": {
-            "okay": true | false,
+            "okay": boolean,
             "issue": "reasoning_for_issue",
             "fix": "fix_suggestion"
         }
