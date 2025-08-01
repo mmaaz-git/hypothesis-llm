@@ -4,6 +4,11 @@ import asyncio
 import ast
 import re
 import subprocess
+import tempfile
+import os
+from typing import Optional, List, Dict
+import xml.etree.ElementTree as ET
+
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 # PARSING UTILS
@@ -56,79 +61,91 @@ def parse_test_functions(test_file: str) -> list[dict]:
 
     return test_functions
 
-def run_pytest_and_parse(test_file: str) -> dict:
-    """
-    Run pytest on test file and parse results per function.
 
-    Returns:
-        Dict mapping function names to their results with details
-    """
-    # Run pytest with detailed output
-    result = subprocess.run([
-        'pytest', test_file, '-v', '--tb=long', '--no-header', '--no-summary'
-    ], capture_output=True, text=True)
+def _extract_falsifying_example(text: str) -> Optional[str]:
+    """Extract the falsifying example block from a failure message."""
+    if "Falsifying example:" not in text:
+        return None
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if "Falsifying example:" in line), None)
+    if start is None:
+        return None
 
-    test_results = {}
+    example_lines = []
+    for line in lines[start:]:
+        if line.strip() == "":
+            break
+        example_lines.append(line.strip())
 
-    # Parse test outcomes from output
-    # Look for lines like: test_file.py::test_function_name PASSED/FAILED/ERROR
-    outcome_pattern = r'(\w+\.py)::(\w+)\s+(PASSED|FAILED|ERROR)'
-    for match in re.finditer(outcome_pattern, result.stdout):
-        file_name, func_name, status = match.groups()
-        test_results[func_name] = {
-            'status': status,
-            'failure_message': ''
+    return "\n".join(example_lines)
+
+def _parse_pytest_junit_xml(path: str) -> List[Dict]:
+    tree = ET.parse(path)
+    root = tree.getroot()
+
+    results = {}
+    for testcase in root.iter("testcase"):
+        name = testcase.attrib.get("name")
+        failure_node = testcase.find("failure")
+        error_node = testcase.find("error")
+
+        if failure_node is not None:
+            status = "fail"
+            falsifying_example = _extract_falsifying_example(failure_node.text or "")
+            error_message = None
+        elif error_node is not None:
+            status = "error"
+            falsifying_example = None
+            error_message = (error_node.text or "").strip()
+        else:
+            status = "pass"
+            falsifying_example = None
+            error_message = None
+
+        results[name] = {
+            "status": status,
+            "falsifying_example": falsifying_example,
+            "error_message": error_message,
         }
 
-    # Parse failure details if any failures occurred
-    if 'FAILED' in result.stdout or 'ERROR' in result.stdout:
-        test_results = parse_failure_details(test_results, result.stdout)
+    return results
 
-    return test_results
+def pytest_report(file_path: str, return_counts: bool = False):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp:
+        report_path = tmp.name
 
-def parse_failure_details(test_results: dict, output: str) -> dict:
-    """
-    Extract detailed failure information from pytest output.
-    """
-    lines = output.split('\n')
-    current_test = None
-    in_failure_section = False
-    failure_lines = []
+    try:
+        result = subprocess.run(
+            [
+                "pytest",
+                file_path,
+                f"--junitxml={report_path}",
+                "-q",
+            ],
+            capture_output=True,
+            timeout=90,
+        )
+    except subprocess.SubprocessError as e:
+        return {"FATAL ERROR": str(e)}
 
-    for i, line in enumerate(lines):
-        # Look for failure headers like "_____________ test_function_name _____________"
-        if line.startswith('_') and any(test_name in line for test_name in test_results.keys()):
-            # Save previous test's failure if any
-            if current_test and failure_lines:
-                test_results[current_test]['failure_message'] = '\n'.join(failure_lines)
-                failure_lines = []
+    if not os.path.exists(report_path):
+        return {"FATAL ERROR": result.stderr.decode()}
 
-            for test_name in test_results.keys():
-                if test_name in line:
-                    current_test = test_name
-                    in_failure_section = True
-                    break
+    with open(report_path) as f:
+        report = _parse_pytest_junit_xml(f)
 
-        # Capture all failure content between test headers
-        elif current_test and in_failure_section:
-            # Don't capture the divider lines
-            if not (line.startswith('=') and line.count('=') > 10):
-                failure_lines.append(line)
+    os.remove(report_path) # cleanup temp file
 
-        # Reset when we hit next section
-        elif line.startswith('=') and line.count('=') > 10:
-            # Save current test's failure
-            if current_test and failure_lines:
-                test_results[current_test]['failure_message'] = '\n'.join(failure_lines)
-                failure_lines = []
-            current_test = None
-            in_failure_section = False
+    if return_counts:
+        counts = {
+            "total": len(report),
+            "fail": sum(1 for r in report if r["status"] == "fail"),
+            "error": sum(1 for r in report if r["status"] == "error"),
+            "pass": sum(1 for r in report if r["status"] == "pass"),
+        }
+        return report, counts
 
-    # Save final test's failure
-    if current_test and failure_lines:
-        test_results[current_test]['failure_message'] = '\n'.join(failure_lines)
-
-    return test_results
+    return report
 
 def parse_python_code(text: str) -> str:
     """
