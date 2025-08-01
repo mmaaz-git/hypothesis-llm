@@ -139,9 +139,9 @@ def pytest_report(file_path: str, return_counts: bool = False):
     if return_counts:
         counts = {
             "total": len(report),
-            "fail": sum(1 for r in report if r["status"] == "fail"),
-            "error": sum(1 for r in report if r["status"] == "error"),
-            "pass": sum(1 for r in report if r["status"] == "pass"),
+            "fail": sum(1 for r in report if report[r]["status"] == "fail"),
+            "error": sum(1 for r in report if report[r]["status"] == "error"),
+            "pass": sum(1 for r in report if report[r]["status"] == "pass"),
         }
         return report, counts
 
