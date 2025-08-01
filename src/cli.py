@@ -79,6 +79,12 @@ def main():
         action="store_true",
         help="Suppress progress output"
     )
+    write_parser.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=DEFAULT_MAX_CONCURRENT_REQUESTS,
+        help="Maximum number of concurrent API requests (default: 10)"
+    )
 
     # Review subcommand
     review_parser = subparsers.add_parser(
@@ -105,6 +111,12 @@ def main():
         "--quiet", "-q",
         action="store_true",
         help="Suppress progress output"
+    )
+    review_parser.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=DEFAULT_MAX_CONCURRENT_REQUESTS,
+        help="Maximum number of concurrent API requests (default: 10)"
     )
 
     # Improve subcommand
@@ -137,6 +149,12 @@ def main():
         "--quiet", "-q",
         action="store_true",
         help="Suppress progress output"
+    )
+    improve_parser.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=DEFAULT_MAX_CONCURRENT_REQUESTS,
+        help="Maximum number of concurrent API requests (default: 10)"
     )
 
     args = parser.parse_args()
@@ -187,7 +205,8 @@ def main():
             result = write(
                 properties_data=properties_data,
                 model_name=args.model,
-                quiet=args.quiet
+                quiet=args.quiet,
+                max_concurrent_requests=args.max_concurrent
             )
 
             # Handle output
@@ -213,7 +232,8 @@ def main():
             result = review(
                 test_file=args.test_file,
                 model_name=args.model,
-                quiet=args.quiet
+                quiet=args.quiet,
+                max_concurrent_requests=args.max_concurrent
             )
 
             # Handle output
@@ -250,7 +270,8 @@ def main():
                 test_file=args.test_file,
                 reviews=reviews_data,
                 model_name=args.model,
-                quiet=args.quiet
+                quiet=args.quiet,
+                max_concurrent_requests=args.max_concurrent
             )
 
             # Handle output
