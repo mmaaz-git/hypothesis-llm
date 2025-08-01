@@ -158,7 +158,7 @@ If the test PASSED:
 - Mark okay=true ONLY if test is genuinely well-written with proper tolerances
 
 If the test FAILED or ERROR:
-- Consider if this might be a GENUINE BUG in the code being tested (mark okay=true, explain in issue)
+- REFLECT on if this demonstrates a genuine bug in the code in the code being tested (mark okay=true, explain in issue)
 - Or if there's a problem with the TEST ITSELF (mark okay=false, suggest fix)
 
 Common TEST problems to look for:
@@ -206,9 +206,12 @@ from hypothesis import given, strategies as st
 ```
 and the function(s) being tested. For example, if you are testing `mean`, you may assume that `from statistics import mean` is available.
 
-Apply the specific fix suggested above. Requirements:
-1. Keep the same function name
-2. If you need imports, put them at the TOP of your output
-3. Apply ONLY the fix described - don't make other changes
+Make the MINIMAL fix needed. Rules:
+1. Keep same function name and exact structure
+2. If fixing floating-point comparison: ONLY change == to math.isclose()
+3. If fixing random.shuffle(): ONLY replace with deterministic alternative
+4. If fixing missing import: ONLY add the missing import
+5. Don't change anything else - no "improvements" or refactoring
+6. One change at a time - if fix suggests multiple things, pick one
 
 Return ONLY the fixed function code:"""
