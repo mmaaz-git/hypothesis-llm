@@ -5,4 +5,18 @@ hypothesis-llm suggest statistics -f mean,median,mode,stdev,variance -o statisti
 hypothesis-llm write statistics_properties.json -o statistics_tests.py
 hypothesis-llm review statistics_tests.py -o statistics_reviews.json
 hypothesis-llm improve statistics_tests.py statistics_reviews.json -o statistics_tests_improved.py
+hypothesis-llm review statistics_tests_improved.py -o statistics_reviews_2.json
+hypothesis-llm improve statistics_tests_improved.py statistics_reviews_2.json -o statistics_tests_improved_2.py
 ```
+
+To see that the review and improvements work, note that if you run the following commands:
+```bash
+pytest statistics_tests.py --tb=no
+pytest statistics_tests_improved.py --tb=no
+pytest statistics_tests_improved_2.py --tb=no
+```
+
+You will see that:
+- `statistics_tests.py` has 34.8% failure rate (23 failed / 43 passed)
+- `statistics_tests_improved.py` has 26.4% failure rate (19 failed / 53 passed)
+- `statistics_tests_improved_2.py` has 18.2% failure rate (14 failed / 63 passed)

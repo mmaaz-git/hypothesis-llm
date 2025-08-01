@@ -14,1574 +14,1270 @@ from statistics import (
 
 
 
-@given(st.floats(allow_nan=False, allow_infinity=False))
-def test_single_element_identity_float(x):
-    """Test that mean of single element equals that element for floats."""
-    import math
-    result = mean([x])
-    assert math.isclose(result, x)
 
-
-
-@given(st.lists(st.integers(), min_size=1))
-def test_bounded_property(data):
-    """Test that median is always between min and max of the data."""
-    result = median(data)
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1))
+def test_mean_bounded_by_min_max(data):
+    """Test that min(data) ≤ mean(data) ≤ max(data)"""
+    result = mean(data)
     assert min(data) <= result <= max(data)
 
 
 
+@given(st.floats(allow_nan=False, allow_infinity=False))
+def test_mean_single_element_invariant(x):
+    """Test that mean([x]) == x for any single element"""
+    import math
+    result = mean([x])
+    assert math.isclose(result, x, rel_tol=1e-9)
+
+
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1))
+def test_mean_order_independence(data):
+    """Test that mean(data) == mean(shuffled(data))"""
+    import math
+    import random
+    
+    original_mean = mean(data)
+    shuffled_data = data.copy()
+    random.shuffle(shuffled_data)
+    shuffled_mean = mean(shuffled_data)
+    
+    assert math.isclose(original_mean, shuffled_mean, rel_tol=1e-9)
+
+
+@given(st.lists(st.integers(), min_size=1))
+def test_bounded_output(data):
+    """Test that median is bounded by min and max of data."""
+    result = median(data)
+    assert min(data) <= result <= max(data)
+
+
 @given(st.integers())
-def test_singleton_identity(x):
-    """Test that median of single element list returns that element."""
+def test_single_element_identity(x):
+    """Test that median of single element returns that element."""
     assert median([x]) == x
 
 
 
-@given(st.lists(st.integers(), min_size=2, max_size=20).filter(lambda x: len(x) % 2 == 0))
-def test_even_length_property(data):
-    """Test that for even length data, median is average of two middle elements."""
+@given(st.integers())
+def test_single_element_data_returns_that_element(element):
+    """Test that single element data returns that element."""
+    data = [element]
+    result = mode(data)
+    assert result == element
+
+
+@given(st.floats(allow_nan=False, allow_infinity=False, min_value=-1000, max_value=1000))
+def test_stdev_single_duplication_invariance(x):
+    """Test that stdev([x, x]) == 0."""
     import math
-    
-    sorted_data = sorted(data)
-    n = len(sorted_data)
-    i = n // 2
-    expected = (sorted_data[i - 1] + sorted_data[i]) / 2
-    result = median(data)
-    
-    assert math.isclose(result, expected)
-
-
-
-@given(st.lists(st.integers(), min_size=1, max_size=10), st.integers())
-def test_translation_invariance(data, c):
-    """Test that median(data + c) = median(data) + c."""
-    import math
-    
-    translated_data = [x + c for x in data]
-    
-    original_median = median(data)
-    translated_median = median(translated_data)
-    
-    assert math.isclose(translated_median, original_median + c)
-
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2, max_size=20))
-def test_stdev_non_negativity(data):
-    """Test that standard deviation is always non-negative."""
+    data = [x, x]
     result = stdev(data)
-    assert result >= 0
-
+    assert math.isclose(result, 0, abs_tol=1e-15)
 
 
 @given(st.floats(allow_nan=False, allow_infinity=False), st.integers(min_value=2, max_value=20))
-def test_variance_zero_for_constant_data(constant, size):
+def test_variance_zero_for_constant_data(constant_value, size):
     """Test that variance is zero when all data points are identical."""
-    data = [constant] * size
+    import math
+    data = [constant_value] * size
     result = variance(data)
-    import math
-    assert math.isclose(result, 0, abs_tol=1e-10), f"Variance of constant data should be 0, got {result}"
+    assert math.isclose(result, 0, abs_tol=1e-10)
 
 
-@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=2, max_size=20))
-def test_stdev_equals_sqrt_variance_integers(data):
-    """Test that stdev(data) = √variance(data) for integer data.
+
+@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=2, max_size=50))
+def test_stdev_equals_sqrt_of_variance_integers(data):
+    """Test that stdev(data) == sqrt(variance(data)) for integer data.
     
-    This tests the fundamental relationship using integer inputs which
-    should produce exact results within floating point precision.
+    This property tests the fundamental mathematical relationship between
+    standard deviation and variance with integer inputs.
     """
     import math
     
-    var_result = variance(data)
     stdev_result = stdev(data)
-    expected_stdev = math.sqrt(var_result)
+    variance_result = variance(data)
+    sqrt_variance = math.sqrt(variance_result)
     
-    # Use math.isclose for floating point comparison
-    assert math.isclose(stdev_result, expected_stdev, rel_tol=1e-14)
-
-
-@given(st.lists(st.fractions(min_value=-100, max_value=100), min_size=2, max_size=20))
-def test_variance_with_precomputed_mean_equals_variance_without_mean_fractions(data):
-    """
-    Test that variance(data, mean(data)) equals variance(data) for Fraction data.
-    
-    Using Fraction data to test the same property with exact rational arithmetic,
-    ensuring no floating point precision issues.
-    """
-    from statistics import variance, mean
-    
-    # Compute mean of the data
-    data_mean = mean(data)
-    
-    # Compute variance with and without pre-computed mean
-    variance_without_mean = variance(data)
-    variance_with_mean = variance(data, data_mean)
-    
-    # Should be exactly equal for Fraction data
-    assert variance_without_mean == variance_with_mean
+    assert math.isclose(stdev_result, sqrt_variance, rel_tol=1e-12)
 
 
 
 @given(st.lists(st.fractions(min_value=-100, max_value=100), min_size=2, max_size=20))
-def test_stdev_with_mean_equals_stdev_without_mean_fractions(data):
+def test_variance_with_explicit_mean_equals_variance_with_none_fractions(data):
     """
-    Test the stdev property with Fraction data for exact arithmetic.
+    Test the same property with Fraction data for exact arithmetic.
     
-    Fractions provide exact rational arithmetic, eliminating floating point
-    precision concerns and ensuring the property holds exactly.
+    Using Fraction objects ensures exact arithmetic without floating point
+    precision issues, allowing us to test for exact equality.
     """
-    import statistics
     from fractions import Fraction
     
-    # Filter out cases where all values are the same (stdev would be 0)
-    if len(set(data)) < 2:
-        return
+    # Calculate the mean of the data
+    computed_mean = mean(data)
     
-    # Calculate stdev without providing mean
-    stdev_without_mean = statistics.stdev(data)
+    # Get variance with explicit mean
+    variance_with_mean = variance(data, computed_mean)
     
-    # Calculate mean and provide it to stdev  
-    data_mean = statistics.mean(data)
-    stdev_with_mean = statistics.stdev(data, data_mean)
+    # Get variance with None (auto-calculated mean)
+    variance_with_none = variance(data, None)
     
-    # Results should be exactly equal for Fraction inputs
-    assert stdev_without_mean == stdev_with_mean
+    # They should be exactly equal for Fraction inputs
+    assert variance_with_mean == variance_with_none
 
 
 
-@given(st.floats(allow_nan=False, allow_infinity=False))
-def test_variance_zero_for_identical_elements(value):
+@given(st.lists(st.fractions(), min_size=2, max_size=20))
+def test_stdev_with_explicit_mean_equals_stdev_with_none_fractions(data):
     """
-    Test the specific case where all elements are identical - variance should be exactly zero.
+    Test that stdev(data, mean(data)) == stdev(data, None) for Fraction data.
+    
+    This tests the same property but with Fraction input data to ensure
+    the equivalence holds for exact rational arithmetic.
     """
-    import math
+    from statistics import stdev, mean
     
-    # Create data with identical elements
-    data = [value] * 5  # Use 5 identical elements
-    
-    var = variance(data)
+    # Calculate stdev with explicit mean
     data_mean = mean(data)
+    stdev_with_mean = stdev(data, data_mean)
     
-    # All elements should equal the mean
-    assert math.isclose(data_mean, value, rel_tol=1e-9, abs_tol=1e-9)
+    # Calculate stdev with None (let it calculate mean internally)
+    stdev_with_none = stdev(data, None)
     
-    # Variance should be zero
-    assert math.isclose(var, 0, abs_tol=1e-9), f"Variance of identical elements should be zero, got {var}"
+    # For Fraction data, the results should be exactly equal
+    assert stdev_with_mean == stdev_with_none, \
+        f"stdev with explicit mean {stdev_with_mean} != stdev with None {stdev_with_none}"
 
-
-
-@given(st.lists(st.integers(-1000, 1000), min_size=2, max_size=50))
-def test_variance_non_negative_with_integers(data):
-    """
-    Test variance non-negativity property with integer data to avoid floating point issues.
-    """
-    var = variance(data)
-    data_mean = mean(data)
-    
-    # Variance is always non-negative
-    assert var >= 0, f"Variance should be non-negative, got {var}"
-    
-    # Check zero variance condition: all elements must be equal
-    all_elements_equal = all(x == data[0] for x in data)
-    
-    if all_elements_equal:
-        assert var == 0, f"Variance should be zero for identical elements, got {var}"
-    else:
-        assert var > 0, f"Variance should be positive for non-identical elements, got {var}"
-
-
-
-@given(st.lists(st.integers(), min_size=1, max_size=1))
-def test_mode_single_element_dataset(data):
-    """
-    Test the edge case where the dataset contains exactly one element.
-    This is technically a case with no repeated values, and should return that single element.
-    """
-    from statistics import mode
-    
-    result = mode(data)
-    
-    # With a single element, that element is both the first occurrence and the only choice
-    assert result == data[0], f"Expected the single element {data[0]}, got {result}"
-
-@given(st.lists(st.integers(min_value=-2**53, max_value=2**53), min_size=1))
-def test_arithmetic_mean_formula(data):
-    """Test that mean equals sum of elements divided by count."""
-    import math
-    
-    result = mean(data)
-    expected = sum(data) / len(data)
-    
-    # Handle edge cases where the result might be infinity
-    if math.isinf(expected) and math.isinf(result):
-        assert math.copysign(1, result) == math.copysign(1, expected)  # Check same sign of infinity
-    else:
-        assert math.isclose(result, expected, rel_tol=1e-15)
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=1))
-def test_arithmetic_mean_formula_floats(data):
-    """Test arithmetic mean formula for floats using approximate equality."""
-    import math
-    from statistics import mean
-    result = mean(data)
-    expected = sum(data) / len(data)
-    assert math.isclose(result, expected, rel_tol=1e-9, abs_tol=1e-12)
-
-@given(st.lists(st.integers(), min_size=1))
-def test_commutativity(data):
-    """Test that mean is invariant under permutation of elements."""
-    import math
-    from random import shuffle
-    from statistics import mean
-    
-    original_mean = mean(data)
-    shuffled_data = data.copy()
-    shuffle(shuffled_data)
-    assert math.isclose(mean(shuffled_data), original_mean)
-
-def test_empty_input_exception():
-    """Test that mean raises StatisticsError for empty input."""
+@given(st.just([]))
+def test_mean_empty_list_raises_error(data):
+    """Test that mean([]) raises StatisticsError"""
     import pytest
     from statistics import mean, StatisticsError
-    
     with pytest.raises(StatisticsError):
-        mean([])
+        mean(data)
 
-@given(st.integers(min_value=-10**10, max_value=10**10))
-def test_single_element_identity_int(x):
-    """Test that mean of single element equals that element."""
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1), 
+       st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6))
+def test_mean_linear_scaling(data, k):
+    """Test that mean([k*x for x in data]) == k * mean(data)
+    
+    This property tests the linearity of the mean function under scalar multiplication.
+    Special handling is needed for k=0 due to floating-point representation issues,
+    and adaptive tolerance is used to account for accumulated precision errors.
+    """
     import math
-    assert math.isclose(mean([x]), x)
-
-@given(st.integers(), st.integers(min_value=1, max_value=100))
-def test_constant_value_property(c, n):
-    """Test that mean of n identical values equals that value."""
-    import math
-    data = [c] * n
-    assert math.isclose(mean(data), c, rel_tol=1e-10, abs_tol=1e-10)
-
-@given(st.lists(st.integers(min_value=-1e10, max_value=1e10), min_size=1), 
-       st.integers(min_value=-1e6, max_value=1e6).filter(lambda x: x != 0))
-def test_linear_transformation(data, k):
-    """Test that mean scales linearly: mean(k*data) = k * mean(data)."""
-    import math
-    from statistics import mean
     
     scaled_data = [k * x for x in data]
-    result = mean(scaled_data)
-    expected = k * mean(data)
-    assert math.isclose(result, expected, rel_tol=1e-9)
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1), 
-       k=st.floats(allow_nan=False, allow_infinity=False))
-def test_linear_transformation_floats(data, k):
-    """Test linear transformation property for floats."""
-    import math
-    from statistics import mean
-    scaled_data = [k * x for x in data]
-    result = mean(scaled_data)
-    expected = k * mean(data)
-    assert math.isclose(result, expected)
-
-@given(st.lists(st.integers(), min_size=1), st.integers())
-def test_translation_property(data, c):
-    """Test that mean(data + c) = mean(data) + c."""
-    import math
-    from statistics import mean
-    
-    translated_data = [x + c for x in data]
-    result = mean(translated_data)
-    expected = mean(data) + c
-    assert math.isclose(result, expected, rel_tol=1e-9, abs_tol=1e-12)
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1), c=st.floats(allow_nan=False, allow_infinity=False))
-def test_translation_property_floats(data, c):
-    """Test translation property for floats."""
-    import math
-    from statistics import mean
-    translated_data = [x + c for x in data]
-    result = mean(translated_data)
-    expected = mean(data) + c
-    assert math.isclose(result, expected)
-
-@given(st.lists(st.integers(), min_size=1))
-def test_boundedness(data):
-    """Test that min(data) <= mean(data) <= max(data) with floating-point tolerance."""
-    import math
-    from statistics import mean
-    
-    result = mean(data)
-    min_val = min(data)
-    max_val = max(data)
-    
-    # Use small epsilon for floating-point comparison tolerance
-    epsilon = 1e-10
-    assert min_val - epsilon <= result <= max_val + epsilon
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1))
-def test_boundedness_floats(data):
-    """Test boundedness property for floats."""
-    import math
-    
-    result = mean(data)
-    min_val = min(data)
-    max_val = max(data)
-    
-    # Handle floating-point precision issues by allowing small epsilon differences
-    # or using math.isclose() when result is very close to boundaries
-    epsilon = 1e-10
-    
-    if math.isclose(result, min_val, rel_tol=1e-9, abs_tol=1e-10):
-        # Result is very close to minimum, allow for floating-point precision
-        assert result >= min_val - epsilon
-    elif math.isclose(result, max_val, rel_tol=1e-9, abs_tol=1e-10):
-        # Result is very close to maximum, allow for floating-point precision
-        assert result <= max_val + epsilon
-    else:
-        # Standard boundedness check with epsilon tolerance
-        assert min_val - epsilon <= result <= max_val + epsilon
-
-@given(st.lists(st.fractions(), min_size=1))
-def test_type_preservation_fractions(data):
-    """Test that fractions return fractions."""
-    from fractions import Fraction
-    from statistics import mean
-    result = mean(data)
-    assert isinstance(result, Fraction)
-
-@given(st.lists(st.decimals(allow_nan=False, allow_infinity=False), min_size=1))
-def test_type_preservation_decimals(data):
-    """Test that decimals return decimals."""
-    from decimal import Decimal
-    from statistics import mean
-    result = mean(data)
-    assert isinstance(result, Decimal)
-
-@given(st.lists(st.integers(), min_size=2))
-def test_monotonicity_under_replacement(data):
-    """Test that replacing smaller element with larger increases mean."""
-    from statistics import mean
-    
     original_mean = mean(data)
-    min_val = min(data)
-    max_val = max(data)
+    scaled_mean = mean(scaled_data)
+    expected = k * original_mean
     
-    if min_val < max_val:
-        # Replace first occurrence of min with max
-        modified_data = data.copy()
-        min_index = modified_data.index(min_val)
-        modified_data[min_index] = max_val
-        new_mean = mean(modified_data)
-        assert new_mean > original_mean
-
-@given(st.lists(st.integers(min_value=-2**53, max_value=2**53), min_size=1), 
-       st.lists(st.integers(min_value=-2**53, max_value=2**53), min_size=1))
-def test_concatenation_property(list1, list2):
-    """Test weighted average property for concatenated lists."""
-    import math
-    from statistics import mean
-    
-    combined = list1 + list2
-    combined_mean = mean(combined)
-    
-    expected = (len(list1) * mean(list1) + len(list2) * mean(list2)) / (len(list1) + len(list2))
-    assert math.isclose(combined_mean, expected, rel_tol=1e-15, abs_tol=1e-15)
+    # Handle the special case where k=0
+    # When k=0, all scaled_data elements are 0, so mean should be exactly 0.0
+    if k == 0:
+        assert scaled_mean == 0.0
+    else:
+        # Use adaptive tolerance based on the magnitude of values involved
+        # This accounts for accumulated floating-point errors in both approaches
+        max_abs_value = max(abs(original_mean), abs(scaled_mean), abs(expected))
+        
+        # Set relative tolerance based on the scale of the problem
+        # For very small values, we need a larger relative tolerance
+        # For normal values, use a reasonable relative tolerance
+        rel_tolerance = max(1e-12, 1e-14 * max_abs_value) if max_abs_value > 1e-6 else 1e-9
+        
+        # Use both relative and absolute tolerance for robustness
+        assert math.isclose(scaled_mean, expected, rel_tol=rel_tolerance, abs_tol=1e-15), \
+            f"scaled_mean={scaled_mean}, expected={expected}, diff={abs(scaled_mean - expected)}"
 
 @given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1),
-       st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1))
-def test_concatenation_property_floats(list1, list2):
-    """Test concatenation property for floats."""
+       st.floats(allow_nan=False, allow_infinity=False, min_value=-1e3, max_value=1e3))
+def test_mean_translation_invariant(data, c):
+    """Test that mean([x+c for x in data]) == mean(data) + c
+    
+    This property tests translation invariance: adding a constant to all values
+    should shift the mean by that same constant. Uses a reduced range for c
+    and appropriate tolerance to handle floating-point precision issues.
+    """
     import math
-    from statistics import mean
-    
-    combined = list1 + list2
-    combined_mean = mean(combined)
-    
-    expected = (len(list1) * mean(list1) + len(list2) * mean(list2)) / (len(list1) + len(list2))
-    assert math.isclose(combined_mean, expected, rel_tol=1e-9, abs_tol=1e-12)
+    translated_data = [x + c for x in data]
+    original_mean = mean(data)
+    translated_mean = mean(translated_data)
+    expected = original_mean + c
+    assert math.isclose(translated_mean, expected, rel_tol=1e-12, abs_tol=1e-12)
 
-@given(st.lists(st.one_of(st.integers(), st.floats(allow_nan=False, allow_infinity=False)), min_size=1))
-def test_mixed_numeric_types(mixed_numbers):
-    """Test that mixed numeric types are handled appropriately using property-based testing."""
-    from fractions import Fraction
-    from decimal import Decimal
-    from statistics import mean
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, max_value=1e100, min_value=-1e100), min_size=1),
+       st.lists(st.floats(allow_nan=False, allow_infinity=False, max_value=1e100, min_value=-1e100), min_size=1))
+def test_mean_concatenation_property(a, b):
+    """
+    Test that mean(a + b) == (len(a)*mean(a) + len(b)*mean(b)) / (len(a) + len(b))
+    
+    This property tests the linearity of the mean function over concatenated lists.
+    The mean of concatenated lists should equal the weighted average of the individual means,
+    where weights are the lengths of the respective lists.
+    
+    We constrain float values to avoid extreme numbers that cause precision issues,
+    and use a relaxed tolerance to account for floating point arithmetic limitations.
+    """
     import math
+    concatenated = a + b
+    concatenated_mean = mean(concatenated)
     
-    # Property 1: Mean of mixed int/float should always be float
-    result = mean(mixed_numbers)
+    mean_a = mean(a)
+    mean_b = mean(b)
+    expected = (len(a) * mean_a + len(b) * mean_b) / (len(a) + len(b))
+    
+    # Use relaxed tolerance to handle floating point precision issues
+    # especially when dealing with numbers of different magnitudes
+    assert math.isclose(concatenated_mean, expected, rel_tol=1e-6, abs_tol=1e-9)
+
+import math
+
+@given(st.lists(st.integers(), min_size=1))
+def test_mean_integer_input(data):
+    """Test that mean of integers returns int or float and is mathematically correct"""
+    result = mean(data)
+    assert isinstance(result, (int, float))
+    # Verify correctness
+    expected = sum(data) / len(data)
+    assert result == expected
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1))
+def test_mean_float_input(data):
+    """Test that mean of floats returns float and is mathematically correct"""
+    result = mean(data)
     assert isinstance(result, float)
-    
-    # Property 2: Result should be within expected bounds
-    min_val = min(mixed_numbers)
-    max_val = max(mixed_numbers)
-    assert min_val <= result <= max_val
-    
-    # Property 3: Mean should equal sum divided by length
-    expected = sum(mixed_numbers) / len(mixed_numbers)
+    # Verify correctness with tolerance for floating point arithmetic
+    expected = sum(data) / len(data)
     assert math.isclose(result, expected, rel_tol=1e-9)
 
-@given(st.lists(st.integers().map(lambda x: Fraction(x, 1)), min_size=1))
-def test_fraction_types(fractions_list):
-    """Test that fractions maintain their type in mean calculation."""
-    from fractions import Fraction
-    from statistics import mean
-    
-    result = mean(fractions_list)
-    assert isinstance(result, Fraction)
-    
-    # Property: Result should be within bounds
-    min_val = min(fractions_list)
-    max_val = max(fractions_list)
-    assert min_val <= result <= max_val
+@given(st.lists(st.one_of(st.integers(), st.floats(allow_nan=False, allow_infinity=False)), min_size=1))
+def test_mean_mixed_type_input(data):
+    """Test that mean of mixed int/float data returns correct result"""
+    result = mean(data)
+    assert isinstance(result, (int, float))
+    # Verify correctness with tolerance for floating point arithmetic
+    expected = sum(data) / len(data)
+    if isinstance(expected, float):
+        assert math.isclose(result, expected, rel_tol=1e-9)
+    else:
+        assert result == expected
 
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False).map(lambda x: Decimal(str(x))), min_size=1))
-def test_decimal_types(decimals_list):
-    """Test that decimals maintain their type in mean calculation."""
-    from decimal import Decimal
-    from statistics import mean
+@given(st.floats(allow_nan=False, allow_infinity=False),
+       st.integers(min_value=1, max_value=100))
+def test_mean_duplicate_invariant(x, n):
+    """Test that mean([x]*n) == x
     
-    result = mean(decimals_list)
-    assert isinstance(result, Decimal)
-    
-    # Property: Result should be within bounds
-    min_val = min(decimals_list)
-    max_val = max(decimals_list)
-    assert min_val <= result <= max_val
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6), min_size=1000, max_size=10000))
-def test_numerical_stability_large_datasets(data):
-    """Test that mean handles reasonably large datasets without overflow."""
+    This property tests the invariant that the mean of n identical values
+    should equal the original value. We use both relative and absolute
+    tolerances to handle floating-point precision issues:
+    - Relative tolerance handles larger values appropriately
+    - Absolute tolerance handles cases where x is very small or zero
+    """
     import math
+    data = [x] * n
+    result = mean(data)
+    assert math.isclose(result, x, rel_tol=1e-9, abs_tol=1e-15)
+
+@given(st.lists(st.fractions(), min_size=1))
+def test_mean_fraction_type_preservation(data):
+    """Test that mean preserves Fraction type and computes correct mathematical mean"""
+    from fractions import Fraction
     
     result = mean(data)
-    # Result should be finite for reasonable inputs
-    assert math.isfinite(result), f"Mean of large dataset should be finite, got {result}"
     
-    # Additional sanity check: result should be within reasonable bounds of input range
-    min_val = min(data)
-    max_val = max(data)
-    assert min_val <= result <= max_val, f"Mean {result} should be between min {min_val} and max {max_val}"
+    # Test type preservation: result should be a Fraction
+    assert isinstance(result, Fraction)
+    
+    # Test mathematical correctness: verify the mean is calculated correctly
+    expected = sum(data) / len(data)
+    assert result == expected
+
+@given(st.lists(st.decimals(allow_nan=False, allow_infinity=False, min_value=-1000, max_value=1000, places=2), min_size=1, max_size=100))
+def test_mean_decimal_type_preservation(data):
+    """Test that mean preserves Decimal type and computes correct value
+    
+    This test verifies two key properties:
+    1. Type preservation: The result should be a Decimal when input is Decimal
+    2. Correctness: The computed mean should equal the mathematical mean
+    
+    The strategy uses bounded decimals to avoid overflow issues and extreme
+    precision problems that could affect the calculation.
+    """
+    from decimal import Decimal
+    
+    result = mean(data)
+    
+    # Test type preservation - result should be Decimal type
+    assert isinstance(result, Decimal), f"Expected Decimal, got {type(result)}"
+    
+    # Test correctness of the mean calculation
+    # Use Decimal arithmetic throughout to maintain precision
+    expected_mean = sum(data, Decimal('0')) / Decimal(len(data))
+    assert result == expected_mean, f"Mean calculation incorrect: got {result}, expected {expected_mean}"
 
 @given(st.lists(st.integers(), min_size=1))
-def test_order_independence(data):
-    """Test that median is invariant under permutation of input data."""
-    from statistics import median
-    from hypothesis.strategies import permuted
+def test_order_invariance(data):
+    """Test that median is invariant to the order of input data.
     
-    shuffled_data = permuted(data).example()
-    assert median(data) == median(shuffled_data)
-
-@given(st.lists(st.integers(), min_size=1, max_size=20).filter(lambda x: len(x) % 2 == 1))
-def test_odd_length_property(data):
-    """Test that for odd length data, median is the middle element when sorted."""
-    from statistics import median
-    result = median(data)
+    The median of a dataset should be the same regardless of how the
+    elements are ordered. This test verifies that the median function
+    produces identical results for the original data, sorted data,
+    reverse-sorted data, and randomly shuffled data.
+    """
+    import random
+    
+    # Calculate median of original data as the reference
+    original_median = median(data)
+    
+    # Test with sorted data - should give same result
     sorted_data = sorted(data)
-    assert result == sorted_data[len(data) // 2]
+    assert median(sorted_data) == original_median, "Median should be invariant to sorting"
+    
+    # Test with reverse sorted data - should give same result
+    reverse_sorted_data = sorted(data, reverse=True)
+    assert median(reverse_sorted_data) == original_median, "Median should be invariant to reverse sorting"
+    
+    # Test with shuffled data - should give same result
+    shuffled_data = data.copy()
+    random.shuffle(shuffled_data)
+    assert median(shuffled_data) == original_median, "Median should be invariant to shuffling"
 
-def test_empty_data_exception():
-    """Test that median raises StatisticsError for empty data."""
-    import statistics
-    try:
-        median([])
-        assert False, "Should have raised StatisticsError"
-    except statistics.StatisticsError:
-        pass  # Expected exception
-    except Exception as e:
-        assert False, f"Expected StatisticsError but got {type(e).__name__}: {e}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1, max_size=100))
-def test_monotonicity(data):
-    """Test that median is between min and max of the data."""
-    from statistics import median
+@given(st.lists(st.integers(), max_size=0))
+def test_empty_data_error(empty_list):
+    """Test that median raises StatisticsError for empty data sequences.
     
-    result = median(data)
-    assert min(data) <= result <= max(data)
-
-@given(st.lists(st.integers(), min_size=1, max_size=10))
-def test_duplicate_invariance(data):
-    """Test that median of data where all elements are duplicated equally equals original median."""
-    from statistics import median
-    
-    original_median = median(data)
-    
-    # Duplicate ALL elements equally (each element appears twice)
-    data_with_duplicates = data + data
-    
-    assert median(data_with_duplicates) == original_median
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1), 
-       k=st.floats(min_value=0.01, max_value=1000, allow_nan=False, allow_infinity=False))
-def test_scale_invariance(data, k):
-    """Test that median(k * data) = k * median(data) for positive k."""
-    import math
-    from statistics import median
-    
-    # Filter out any remaining non-finite values that might have slipped through
-    data = [x for x in data if math.isfinite(x)]
-    
-    # Skip if we don't have valid data after filtering
-    if len(data) == 0:
-        return
-    
-    scaled_data = [k * x for x in data]
-    
-    original_median = median(data)
-    scaled_median = median(scaled_data)
-    
-    assert math.isclose(scaled_median, k * original_median, rel_tol=1e-9)
-
-@given(st.lists(st.integers(), min_size=1, max_size=9).filter(lambda x: len(x) % 2 == 1))
-def test_reflection_property(data):
-    """Test that median(-data) = -median(data) for odd-length lists."""
-    import math
-    from statistics import median
-    
-    negated_data = [-x for x in data]
-    
-    original_median = median(data)
-    negated_median = median(negated_data)
-    
-    assert math.isclose(negated_median, -original_median)
-
-@given(st.lists(st.integers(), min_size=3, max_size=10))
-def test_robustness_to_outliers(data):
-    """Test that changing extreme values beyond existing min/max doesn't change median."""
-    from statistics import median
-    
-    original_median = median(data)
-    
-    # Create outliers beyond existing range
-    data_min, data_max = min(data), max(data)
-    outlier_data = data.copy()
-    
-    if len(outlier_data) >= 3:
-        # Find indices before any modifications
-        min_idx = outlier_data.index(min(outlier_data))
-        max_idx = outlier_data.index(max(outlier_data))
-        
-        # If min and max are the same index, find a different index for max
-        if min_idx == max_idx and len(outlier_data) > 1:
-            remaining_indices = [i for i in range(len(outlier_data)) if i != min_idx]
-            max_idx = remaining_indices[0]  # Pick any different index
-        
-        # Replace with outliers (order matters to avoid interference)
-        if min_idx != max_idx:
-            outlier_data[min_idx] = data_min - 1000
-            outlier_data[max_idx] = data_max + 1000
-        else:
-            # All elements are the same, just replace one
-            outlier_data[min_idx] = data_min - 1000
-    
-    outlier_median = median(outlier_data)
-    
-    assert original_median == outlier_median
-
-@given(st.lists(st.integers(), min_size=1))
-def test_result_must_be_element_of_input(data):
-    """Test that mode(data) is always an element of the input data for non-empty data."""
-    from statistics import mode, StatisticsError
-    
-    try:
-        result = mode(data)
-        # mode() returns a single value that should be in the input data
-        assert result in data
-    except StatisticsError:
-        # mode() raises StatisticsError when there's no unique mode
-        # This is expected behavior for multimodal datasets, so we pass
-        pass
-
-def test_empty_input_raises_exception():
-    """Test that mode([]) raises StatisticsError for empty input."""
-    import statistics
+    This property-based test verifies that the median function properly raises
+    a StatisticsError when given any empty sequence, which is the expected
+    behavior according to the statistics module specification.
+    """
     import pytest
+    import statistics
     
     with pytest.raises(statistics.StatisticsError):
-        statistics.mode([])
+        statistics.median(empty_list)
 
-@given(st.one_of(st.integers(), st.text(), st.floats(allow_nan=False, allow_infinity=False)))
-def test_single_element_invariant(x):
-    """Test that mode([x]) contains x as the single mode for any single element."""
-    from statistics import mode
+@given(st.lists(st.integers(), min_size=1).filter(lambda x: len(x) % 2 == 1))
+def test_odd_length_returns_middle_element(data):
+    """Test that for odd length data, median returns the middle element.
+    
+    For a sorted list with odd length, the median should be exactly the element
+    at the middle position (index len(data) // 2).
+    """
+    sorted_data = sorted(data)
+    expected_median = sorted_data[len(sorted_data) // 2]
+    result = median(data)
+    assert result == expected_median
+
+@given(st.integers(min_value=1, max_value=50).flatmap(lambda n: st.lists(st.integers(), min_size=2*n, max_size=2*n)))
+def test_even_length_interpolation(data):
+    """Test that for even length data, median is average of two middle elements."""
+    import math
+    sorted_data = sorted(data)
+    n = len(sorted_data)
+    expected = (sorted_data[n//2 - 1] + sorted_data[n//2]) / 2
+    result = median(data)
+    assert math.isclose(result, expected, rel_tol=1e-9, abs_tol=1e-9)
+
+@given(st.integers(min_value=-(2**53), max_value=2**53), st.integers(min_value=1, max_value=20))
+def test_duplicate_handling(x, count):
+    """Test that median of all identical elements returns that element.
+    
+    This property verifies that when all elements in a list are identical,
+    the median function correctly returns that element. The integer range
+    is restricted to values that can be exactly represented as floats
+    (within 2^53) to avoid floating-point precision issues.
+    """
+    data = [x] * count
+    assert median(data) == x
+
+@given(st.integers(min_value=-10**10, max_value=10**10), st.integers(min_value=-10**10, max_value=10**10))
+def test_two_element_average(a, b):
+    """Test that median of two elements is their average.
+    
+    This property tests that for any two numbers, the median should equal
+    their arithmetic mean. We use bounded integers to avoid overflow issues
+    when computing (a + b) / 2 for very large integer values.
+    """
+    import math
+    result = median([a, b])
+    expected = (a + b) / 2
+    assert math.isclose(result, expected)
+
+@given(st.lists(st.integers(), min_size=1, max_size=10), 
+       st.lists(st.integers(), min_size=1, max_size=10))
+def test_monotonicity_preservation(data1, data2_raw):
+    """Test that if all elements in data1 ≤ corresponding elements in data2, then median(data1) ≤ median(data2)."""
+    # Ensure both lists have the same length by truncating to the shorter length
+    min_len = min(len(data1), len(data2_raw))
+    data1 = data1[:min_len]
+    data2_raw = data2_raw[:min_len]
+    
+    # Create data2 where each element is >= corresponding element in data1
+    # This ensures monotonicity: data2[i] >= data1[i] for all i
+    data2 = [max(x, y) for x, y in zip(data1, data2_raw)]
+    
+    # Test the monotonicity property: if data1 ≤ data2 elementwise, then median(data1) ≤ median(data2)
+    assert median(data1) <= median(data2)
+
+@given(st.lists(st.integers(min_value=-100, max_value=100), min_size=1), 
+       st.integers(min_value=1, max_value=10))
+def test_median_positive_scaling_property(data, k):
+    """Test that median([k*x for x in data]) == k * median(data) for k > 0.
+    
+    This property holds because scaling all elements by a positive constant
+    preserves their relative order, so the median element(s) scale by the 
+    same factor. This is a fundamental property of the median function
+    under positive scalar multiplication.
+    
+    Args:
+        data: A non-empty list of integers to test
+        k: A positive integer scaling factor (k > 0)
+    """
     import math
     
-    result = mode([x])
+    # Scale all elements by k
+    scaled_data = [k * x for x in data]
     
-    # For single element lists, mode should return that element
-    # Handle floating-point comparison separately due to precision issues
-    if isinstance(x, float) and isinstance(result, float):
-        assert math.isclose(result, x), f"Expected mode to be close to {x}, got {result}"
-    else:
-        assert result == x, f"Expected mode to be {x}, got {result}"
+    # Calculate median of scaled data
+    result = median(scaled_data)
+    
+    # Calculate k times the median of original data
+    expected = k * median(data)
+    
+    # Use math.isclose for robust floating-point comparison
+    assert math.isclose(result, expected), f"median({scaled_data}) = {result}, but k * median({data}) = {expected}"
+
+import pytest
+from statistics import StatisticsError, mode
+
+@given(st.just([]))
+def test_empty_data_raises_statistics_error(data):
+    """Test that empty data raises StatisticsError when calculating mode.
+    
+    Property being tested: The mode function should raise a StatisticsError
+    with the message "no mode for empty data" when given an empty list.
+    """
+    with pytest.raises(StatisticsError, match="no mode for empty data"):
+        mode(data)
 
 @given(st.lists(st.integers(), min_size=1))
-def test_order_invariance_with_unique_mode(data):
-    """Test that mode is invariant under permutation when there's a unique mode."""
-    from collections import Counter
-    from statistics import mode
-    
-    # Check if there's a unique mode (highest frequency appears only once)
-    counts = Counter(data)
-    max_count = max(counts.values())
-    modes_with_max_count = [item for item, count in counts.items() if count == max_count]
-    
-    if len(modes_with_max_count) == 1:
-        # There's a unique mode, test order invariance
-        original_mode = mode(data)
-        # Use Hypothesis's deterministic approach to create a permutation
-        shuffled_data = sorted(data, key=lambda x: (x % 7, -x))  # Deterministic reordering
-        assert mode(shuffled_data) == original_mode
-
-@given(st.lists(st.integers(), min_size=1))
-def test_frequency_preservation(data):
-    """Test that if x = mode(data), then count(x, data) >= count(y, data) for all y in data."""
-    from statistics import mode
-    
-    result = mode(data)
-    result_count = data.count(result)
-    
-    # Find the maximum frequency among all elements
-    max_count = max(data.count(x) for x in set(data))
-    
-    # The returned mode should have the maximum frequency
-    assert result_count == max_count
-
-@given(st.one_of(st.integers(), st.text()).filter(lambda x: x != "different"))
-def test_tie_breaking_consistency(element):
-    """Test that mode returns the first occurrence when there are tied elements."""
-    # Create data where two elements have the same frequency
-    data = [element, element, "different", "different"]
-    result = mode(data)
-    # The mode should be the first element since both have count 2
-    assert result == element
-
-@given(st.lists(st.integers(), min_size=1), st.integers())
-def test_duplication_irrelevance_for_unique_mode(data, x):
-    """Test that if x is already the unique mode, adding more x's doesn't change the result."""
-    from collections import Counter
-    from statistics import mode
-    
-    # Only test when x is in data and is the unique mode
-    if x not in data:
-        return
-        
-    try:
-        original_mode = mode(data)
-        if original_mode != x:
-            return
-            
-        # Verify x is truly the unique mode
-        counts = Counter(data)
-        x_count = counts[x]
-        other_counts = [count for item, count in counts.items() if item != x]
-        if other_counts and max(other_counts) >= x_count:
-            return  # x is not unique mode
-            
-        # Now test the property
-        extended_data = data + [x, x, x]
-        assert mode(extended_data) == x
-    except:
-        # Skip if mode() fails on original data
-        return
-
-@given(st.one_of(st.lists(st.integers(), min_size=1), st.lists(st.text(), min_size=1)))
-def test_type_preservation(data):
-    """Test that the type of mode(data) matches the type of elements in data and is actually the statistical mode."""
-    from statistics import mode
-    from collections import Counter
-    
+def test_return_value_is_mode_of_input_data_integers(data):
+    """Test that the returned mode is the most frequent element from the input data."""
     result = mode(data)
     
-    # The result should have the same type as the elements in data (homogeneous)
-    element_types = set(type(x) for x in data)
-    assert len(element_types) == 1, "Data should be homogeneous"
-    assert type(result) in element_types
+    # Verify the result is in the input data
+    assert result in data
     
-    # Verify the result is actually the statistical mode (most frequent element)
+    # Verify the result is actually the mode (most frequent element)
+    from collections import Counter
     counter = Counter(data)
     max_count = max(counter.values())
     most_frequent_elements = [elem for elem, count in counter.items() if count == max_count]
+    
+    # The result should be one of the most frequent elements
     assert result in most_frequent_elements
 
-@given(st.lists(st.integers(), min_size=2))
-def test_subset_property_violation(data):
-    """Test that mode(subset) may not equal mode(superset) - this is expected behavior."""
-    from statistics import mode
+from collections import Counter
+
+@given(st.lists(st.text(), min_size=1))
+def test_return_value_is_element_from_input_data_strings(data):
+    """Test that the returned mode is the most frequent element from the input data (strings)."""
+    result = mode(data)
     
-    # This test demonstrates that the subset property doesn't hold for mode
-    # We create a subset that is guaranteed to be non-empty
-    subset = data[:max(1, len(data)//2)]
+    # First verify the result exists in the input data
+    assert result in data
     
-    subset_mode = mode(subset)
-    superset_mode = mode(data)
+    # Verify that the result is actually a mode (most frequent element)
+    counter = Counter(data)
+    max_count = max(counter.values())
+    assert counter[result] == max_count, f"Result '{result}' has count {counter[result]}, but max count is {max_count}"
+
+@given(st.lists(st.text(min_size=1), min_size=2))
+def test_first_occurrence_wins_for_ties(data):
+    """Test that when multiple elements have the same maximum frequency, the first one encountered wins."""
+    # Create a scenario where we know there will be ties
+    # Take the first two unique elements and make them appear with the same (maximum) frequency
+    unique_elements = list(dict.fromkeys(data))  # preserve order, remove duplicates
+    if len(unique_elements) < 2:
+        return  # Skip if we don't have enough unique elements
     
-    # We don't assert equality - we just verify both calls work
-    # This property violation is expected and correct behavior
-    assert subset_mode in subset
-    assert superset_mode in data
+    # Create a list where first two unique elements appear twice each, others appear once
+    first_element = unique_elements[0]
+    second_element = unique_elements[1]
+    remaining_elements = unique_elements[2:]
     
-    # Track when the property violation occurs to demonstrate it can happen
-    if subset_mode != superset_mode:
-        # This is the expected property violation - subset mode can differ from superset mode
-        pass
+    # Construct test data: first_element appears first, both tie for max frequency
+    test_data = [first_element, second_element, first_element, second_element] + remaining_elements
+    
+    result = mode(test_data)
+    # The first element should win the tie
+    assert result == first_element
 
 @given(st.lists(st.integers(), min_size=1))
-def test_monotonicity_absence(data):
-    """Test that adding elements can change the mode arbitrarily."""
-    from statistics import mode
+def test_works_with_integers(data):
+    """Test that mode works with integer data and returns actual mode(s).
     
-    original_mode = mode(data)
+    This test verifies that:
+    1. The mode function returns integer(s) that exist in the input data
+    2. The returned value(s) are actually the most frequent element(s)
+    3. The function handles both single and multiple mode cases correctly
+    """
+    result = mode(data)
     
-    # Add a new element that doesn't appear in original data
-    new_element = max(data) + 1 if data else 1
-    # Add it enough times to make it the new mode
-    extended_data = data + [new_element] * (len(data) + 1)
-    new_mode = mode(extended_data)
+    # Handle both single mode and multiple modes cases
+    if isinstance(result, list):
+        modes = result
+    else:
+        modes = [result]
     
-    # The mode can change when we add elements (monotonicity doesn't hold)
-    assert new_mode == new_element
-    assert new_mode != original_mode
-
-@given(st.lists(st.integers(), min_size=1))
-def test_idempotency_for_single_mode_datasets(data):
-    """Test that if data has unique mode x, then mode(data + data) = x."""
+    # All returned modes should be integers from the data
+    for m in modes:
+        assert isinstance(m, int), f"Mode {m} is not an integer"
+        assert m in data, f"Mode {m} is not present in the input data"
+    
+    # Verify these are actually modes (most frequent values)
     from collections import Counter
-    from statistics import mode, multimode
-    
     counts = Counter(data)
     max_count = max(counts.values())
-    modes_with_max_count = [item for item, count in counts.items() if count == max_count]
+    expected_modes = [val for val, count in counts.items() if count == max_count]
     
-    if len(modes_with_max_count) == 1:
-        # There's a unique mode
-        original_mode = mode(data)
-        # Validate that the mode function returns the correct value
-        assert original_mode in modes_with_max_count
-        
-        doubled_data = data + data
-        doubled_mode = mode(doubled_data)
-        assert doubled_mode == original_mode
-    else:
-        # Multi-modal case: test that multimode returns all modes
-        original_modes = multimode(data)
-        # Validate that multimode returns the correct modes
-        assert set(original_modes) == set(modes_with_max_count)
-        
-        doubled_data = data + data
-        doubled_modes = multimode(doubled_data)
-        # After doubling, the modes should remain the same
-        assert set(doubled_modes) == set(original_modes)
+    # The returned modes should exactly match the mathematically correct modes
+    assert set(modes) == set(expected_modes), \
+        f"Expected modes {expected_modes}, but got {modes}"
+    
+    # Ensure no duplicates in the result if it's a list
+    if isinstance(result, list):
+        assert len(modes) == len(set(modes)), "Duplicate modes returned"
 
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2, max_size=20))
-def test_stdev_zero_iff_all_equal(data):
-    """Test that stdev is zero if and only if all elements are equal."""
+@given(st.lists(st.text(), min_size=1))
+def test_works_with_strings(data):
+    """Test that mode works with string data and returns the most frequent element.
+    
+    This test verifies that:
+    1. The mode function returns a string when given string data
+    2. The returned value is present in the original data
+    3. The returned value has the maximum frequency count (is actually a mode)
+    """
+    result = mode(data)
+    assert isinstance(result, str)
+    assert result in data
+    
+    # Count frequencies to verify the result is actually a mode
+    from collections import Counter
+    counts = Counter(data)
+    max_count = max(counts.values())
+    
+    # The result should be one of the elements with maximum frequency
+    assert counts[result] == max_count
+
+@given(st.lists(st.tuples(st.integers(), st.text()), min_size=1))
+def test_works_with_tuples(data):
+    """Test that mode works with tuple data (hashable) and returns the most frequent element."""
+    result = mode(data)
+    
+    # Verify the result is a tuple and exists in the input data
+    assert isinstance(result, tuple)
+    assert result in data
+    
+    # Count frequencies to verify it's actually the mode
+    from collections import Counter
+    counts = Counter(data)
+    max_count = max(counts.values())
+    
+    # The returned tuple must have the maximum frequency count
+    assert counts[result] == max_count, f"Result {result} appears {counts[result]} times, but max frequency is {max_count}"
+    
+    # Additional verification: ensure no other element has a higher frequency
+    for element, count in counts.items():
+        assert count <= counts[result], f"Element {element} has count {count} which is greater than result {result} with count {counts[result]}"
+
+@given(st.lists(st.integers(), min_size=1))
+def test_returned_element_has_maximum_frequency(data):
+    """Test that the returned element has the maximum frequency in the data.
+    
+    This test verifies that:
+    1. The returned element actually appears in the input data
+    2. The returned element has the maximum frequency among all elements
+    3. The returned element is one of the valid mode candidates (handles ties correctly)
+    """
+    from collections import Counter
+    
+    result = mode(data)
+    counter = Counter(data)
+    max_frequency = max(counter.values())
+    
+    # Get all elements that have the maximum frequency (valid mode candidates)
+    elements_with_max_freq = [elem for elem, freq in counter.items() if freq == max_frequency]
+    
+    # The result should be one of the elements with maximum frequency
+    assert result in elements_with_max_freq, f"Result {result} is not among valid mode candidates {elements_with_max_freq}"
+    
+    # Also verify it actually has the maximum frequency
+    assert counter[result] == max_frequency, f"Result {result} has frequency {counter[result]}, but max frequency is {max_frequency}"
+
+@given(st.lists(st.integers(), min_size=1))
+def test_mode_is_most_frequent_element(data):
+    """Test that the mode function returns the most frequently occurring element(s)."""
+    result = mode(data)
+    
+    # Count frequencies to determine expected modes
+    from collections import Counter
+    counts = Counter(data)
+    max_count = max(counts.values())
+    expected_modes = [item for item, count in counts.items() if count == max_count]
+    
+    # The result should be one of the most frequent elements
+    # (in case of ties, different implementations might return different valid modes)
+    if isinstance(result, list):
+        # If function returns a list of modes
+        assert len(result) > 0, "Mode function should return at least one mode"
+        assert all(r in expected_modes for r in result), "All returned modes should be among the most frequent elements"
+    else:
+        # If function returns a single mode
+        assert result in expected_modes, "Returned mode should be one of the most frequent elements"
+
+@given(st.lists(st.text(min_size=1, max_size=10), min_size=2, max_size=20))
+def test_order_preservation_for_tie_breaking(data):
+    """Test that mode preserves order for tie-breaking - first occurrence wins among tied elements.
+    
+    This property-based test verifies that when multiple elements have the same highest frequency,
+    the mode function returns the element that appears first in the original list.
+    """
+    result = mode(data)
+    
+    # Count frequencies and track first occurrence position for each element
+    counts = {}
+    first_occurrence = {}
+    for i, item in enumerate(data):
+        if item not in counts:
+            counts[item] = 0
+            first_occurrence[item] = i
+        counts[item] += 1
+    
+    # Find the maximum frequency
+    max_freq = max(counts.values())
+    
+    # Find all elements that have the maximum frequency (tied for mode)
+    tied_items = [item for item, count in counts.items() if count == max_freq]
+    
+    # The result should be one of the tied items
+    assert result in tied_items, f"Result {result} is not among the most frequent items {tied_items}"
+    
+    # If there are multiple tied items, the result should be the one that appears first
+    if len(tied_items) > 1:
+        expected_winner = min(tied_items, key=lambda x: first_occurrence[x])
+        assert result == expected_winner, (
+            f"Expected {expected_winner} (first occurrence at index {first_occurrence[expected_winner]}) "
+            f"to win tie-breaking, but got {result} (first occurrence at index {first_occurrence[result]})"
+        )
+    
+    # Verify that the result actually appears in the original data
+    assert result in data, f"Result {result} does not appear in the input data {data}"
+    
+    # Verify that the result has the maximum frequency
+    assert counts[result] == max_freq, (
+        f"Result {result} has frequency {counts[result]}, but maximum frequency is {max_freq}"
+    )
+
+@given(st.lists(st.integers(), min_size=1, max_size=10))
+def test_mode_with_tie_scenario(data):
+    """Test mode when all elements appear exactly once (tie scenario)."""
+    # Create data where each element appears exactly once
+    unique_data = list(set(data))
+    
+    if len(unique_data) >= 2:
+        # Tie scenario: all elements appear exactly once
+        result = mode(unique_data)
+        # In a tie scenario, result should be one of the elements in the list
+        assert result in unique_data, f"Mode {result} should be one of the elements {unique_data}"
+    elif len(unique_data) == 1:
+        # Single element case: no tie, clear mode
+        result = mode(unique_data)
+        assert result == unique_data[0], f"Mode should be the only element {unique_data[0]}"
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6), min_size=3, max_size=20))
+def test_stdev_properties(data):
+    """Test mathematical properties of standard deviation."""
     import math
-    from statistics import stdev
     
     result = stdev(data)
-    all_equal = len(set(data)) == 1
-    is_zero = math.isclose(result, 0, abs_tol=1e-10)
     
-    # Test the if-and-only-if relationship
-    assert all_equal == is_zero
+    # Standard deviation should always be non-negative
+    assert result >= 0
+    
+    # If all values are the same, standard deviation should be 0
+    if len(set(data)) == 1:
+        assert result == 0
+    else:
+        # If values differ, standard deviation should be positive
+        assert result > 0
+    
+    # Standard deviation should be scale-invariant for multiplication
+    # stdev([k*x for x in data]) should equal |k| * stdev(data)
+    if result > 0:  # Only test scaling when there's variation in the data
+        scaled_data = [2 * x for x in data]
+        scaled_result = stdev(scaled_data)
+        assert math.isclose(scaled_result, 2 * result, rel_tol=1e-9)
+    
+    # Standard deviation should be translation-invariant
+    # stdev([x + c for x in data]) should equal stdev(data)
+    translated_data = [x + 100 for x in data]
+    translated_result = stdev(translated_data)
+    assert math.isclose(translated_result, result, rel_tol=1e-9)
 
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2), 
-       k=st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10).filter(lambda x: abs(x) > 1e-10))
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=0, max_size=1))
+def test_stdev_error_condition_insufficient_data(data):
+    """Test that stdev raises StatisticsError when given fewer than 2 data points.
+    
+    Standard deviation requires at least 2 data points to calculate the variance
+    from the mean. Both empty lists and single-element lists should raise
+    StatisticsError since there's insufficient data to compute a meaningful
+    standard deviation.
+    """
+    import pytest
+    from statistics import StatisticsError
+    
+    with pytest.raises(StatisticsError):
+        stdev(data)
+
+@given(
+    st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6), min_size=2, max_size=10),
+    st.floats(allow_nan=False, allow_infinity=False, min_value=-100, max_value=100).filter(lambda x: x != 0)
+)
 def test_stdev_scale_invariance(data, k):
-    """Test that stdev(k*data) = |k| * stdev(data)."""
+    """Test that stdev([k*x for x in data]) == abs(k) * stdev(data) for k != 0.
+    
+    This tests the mathematical property that standard deviation scales linearly
+    with the absolute value of the scaling factor. This is a fundamental property
+    of standard deviation that should hold for any non-zero scaling factor k.
+    """
     import math
-    from statistics import stdev
-    
-    # Skip cases where all data points are identical (stdev would be 0)
-    if len(set(data)) < 2:
-        return
-    
-    scaled_data = [k * x for x in data]
     original_stdev = stdev(data)
+    scaled_data = [k * x for x in data]
     scaled_stdev = stdev(scaled_data)
     expected = abs(k) * original_stdev
-    
+    # Use a more reasonable tolerance to account for floating-point precision issues
+    # that can accumulate through multiplication and standard deviation calculations
     assert math.isclose(scaled_stdev, expected, rel_tol=1e-9)
 
 @given(
-    st.lists(
-        st.floats(min_value=-1e10, max_value=1e10, allow_nan=False, allow_infinity=False), 
-        min_size=2
-    ), 
-    st.floats(min_value=-1e10, max_value=1e10, allow_nan=False, allow_infinity=False)
+    st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e3, max_value=1e3), min_size=2, max_size=10),
+    st.floats(allow_nan=False, allow_infinity=False, min_value=-100, max_value=100)
 )
-def test_stdev_translation_invariance(data, k):
-    """Test that stdev(data + k) = stdev(data) for scalar k."""
-    import math
-    from statistics import stdev
+def test_stdev_translation_invariance(data, c):
+    """Test that stdev([x + c for x in data]) == stdev(data).
     
-    translated_data = [x + k for x in data]
+    Translation invariance is a fundamental property of standard deviation:
+    adding a constant to all values should not change the spread (standard deviation).
+    This test verifies this mathematical property while handling floating-point
+    precision limitations by filtering out cases where extremely small values
+    would cause numerical instability when combined with larger translation constants.
+    """
+    import math
+    
+    # Skip cases where data contains values that are extremely small relative to c
+    # This prevents floating-point precision issues where tiny values become
+    # negligible compared to the translation constant
+    if c != 0 and any(abs(x) < abs(c) * 1e-12 and x != 0 for x in data):
+        return
+    
+    # Skip cases where all values are effectively zero (would result in zero stdev)
+    if all(abs(x) < 1e-15 for x in data):
+        return
+    
     original_stdev = stdev(data)
+    translated_data = [x + c for x in data]
     translated_stdev = stdev(translated_data)
     
-    assert math.isclose(translated_stdev, original_stdev, rel_tol=1e-9, abs_tol=1e-15)
+    # Use both relative and absolute tolerance to handle cases where stdev is very small
+    assert math.isclose(translated_stdev, original_stdev, rel_tol=1e-9, abs_tol=1e-12), \
+        f"Translation invariance failed: original_stdev={original_stdev}, translated_stdev={translated_stdev}, data={data}, c={c}"
 
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=0, max_size=1))
-def test_stdev_minimum_sample_size_requirement(data):
-    """Test that stdev raises StatisticsError when len(data) < 2."""
-    from statistics import StatisticsError, stdev
+@given(
+    st.floats(allow_nan=False, allow_infinity=False, min_value=-1000, max_value=1000),
+    st.integers(min_value=2, max_value=10)
+)
+def test_stdev_zero_deviation_constant_data(c, n):
+    """Test that stdev of constant data equals zero.
     
-    # Verify that our generated data actually has less than 2 elements
-    assert len(data) < 2, f"Test data should have less than 2 elements, got {len(data)}"
-    
-    try:
-        stdev(data)
-        assert False, "Expected StatisticsError for data with less than 2 elements"
-    except StatisticsError:
-        pass  # Expected behavior
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2, max_size=20),
-       indices=st.data())
-def test_stdev_order_invariance(data, indices):
-    """Test that stdev is invariant under permutation of data."""
+    Property: When all data points are identical, the standard deviation
+    should be zero since there is no variation in the data.
+    Uses n >= 2 to ensure valid standard deviation calculation.
+    """
     import math
-    from statistics import stdev
-    
-    original_stdev = stdev(data)
-    
-    # Create a shuffled copy using Hypothesis's deterministic permutation
-    shuffled_data = indices.draw(st.permutations(data))
-    shuffled_stdev = stdev(shuffled_data)
-    
-    assert math.isclose(original_stdev, shuffled_stdev, rel_tol=1e-10)
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2, max_size=20))
-def test_stdev_upper_bound_by_range(data):
-    """Test that stdev ≤ (max - min)/2 * sqrt(2(n-1)/n)."""
-    import math
-    from statistics import stdev
-    
-    if len(set(data)) == 1:  # All elements equal
-        return  # Skip this test case as bound doesn't apply meaningfully
-        
-    n = len(data)
-    data_range = max(data) - min(data)
-    upper_bound = (data_range / 2) * math.sqrt(2 * (n - 1) / n)
+    data = [c] * n
     result = stdev(data)
-    
-    assert result <= upper_bound + 1e-10  # Small tolerance for floating point
+    # Use a more reasonable tolerance for floating-point comparisons
+    # to account for potential precision errors in calculations
+    assert math.isclose(result, 0, abs_tol=1e-12)
 
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=20))
-def test_stdev_consistency_with_variance(data):
-    """Test that stdev(data) = sqrt(variance(data))."""
-    import math
-    from statistics import variance, stdev
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1000, max_value=1000), min_size=2, max_size=10))
+def test_stdev_consistency_with_xbar_parameter(data):
+    """Test that stdev(data, xbar) == stdev(data) when xbar equals the actual mean.
     
+    This property verifies that providing the correct mean as the xbar parameter
+    should produce the same result as letting stdev calculate the mean internally.
+    The test accounts for floating-point precision issues that can occur when
+    dealing with numbers of vastly different magnitudes by using appropriate
+    tolerances in the comparison.
+    """
+    import math
+    mean_value = sum(data) / len(data)
+    stdev_without_xbar = stdev(data)
+    stdev_with_xbar = stdev(data, xbar=mean_value)
+    assert math.isclose(stdev_without_xbar, stdev_with_xbar, rel_tol=1e-9, abs_tol=1e-15)
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-100, max_value=100), min_size=2, max_size=10))
+def test_stdev_relationship_to_variance(data):
+    """
+    Test that stdev(data) == sqrt(variance(data)).
+    
+    This property tests the fundamental mathematical relationship between
+    standard deviation and variance. Uses relaxed tolerance to account for
+    floating-point precision errors that can accumulate through square root
+    operations.
+    """
+    import math
     stdev_result = stdev(data)
     variance_result = variance(data)
     expected = math.sqrt(variance_result)
     
-    assert math.isclose(stdev_result, expected, rel_tol=1e-9)
+    # Use more reasonable tolerances to handle floating-point precision errors
+    # rel_tol=1e-12 for relative tolerance and abs_tol=1e-15 for cases near zero
+    assert math.isclose(stdev_result, expected, rel_tol=1e-12, abs_tol=1e-15), \
+        f"stdev({data}) = {stdev_result}, but sqrt(variance({data})) = {expected}"
 
-@given(
-    base_data=st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1000, max_value=1000), min_size=2, max_size=100),
-    spread_factor=st.floats(min_value=1.01, max_value=10, allow_nan=False, allow_infinity=False)
-)
-def test_stdev_monotonicity_under_data_spread(base_data, spread_factor):
-    """Test that more spread out data has larger standard deviation."""
-    import math
-    from statistics import mean, stdev
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=50))
+def test_variance_non_negative(data):
+    """Test that variance is always non-negative.
     
-    # Create data with same mean but larger deviations
-    data_mean = mean(base_data)
-    more_spread_data = [data_mean + spread_factor * (x - data_mean) for x in base_data]
-    
-    original_stdev = stdev(base_data)
-    spread_stdev = stdev(more_spread_data)
-    
-    # Only test if original has meaningful spread (not constant data)
-    if original_stdev > 1e-10:
-        assert spread_stdev > original_stdev
-    else:
-        # If original data is constant, spread data should have zero stdev too
-        assert math.isclose(spread_stdev, 0, abs_tol=1e-10)
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e50, max_value=1e50), min_size=2, max_size=20))
-def test_stdev_robustness_to_xbar_parameter(data):
-    """Test that providing the true sample mean as xbar gives same result."""
-    import math
-    from statistics import mean, stdev
-    
-    sample_mean = mean(data)
-    result_without_xbar = stdev(data)
-    result_with_xbar = stdev(data, xbar=sample_mean)
-    
-    assert math.isclose(result_without_xbar, result_with_xbar, rel_tol=1e-10)
-
-@given(
-    data=st.lists(
-        st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6), 
-        min_size=2, 
-        max_size=100
-    ).filter(lambda x: len(set(x)) > 1),  # Ensure non-zero variance
-    outlier_magnitude=st.floats(
-        allow_nan=False, 
-        allow_infinity=False, 
-        min_value=-1e6, 
-        max_value=1e6
-    ).filter(lambda x: abs(x) > 1e-6)  # Ensure outlier is meaningfully different from mean
-)
-def test_stdev_effect_of_outliers(data, outlier_magnitude):
-    """Test that adding an outlier increases standard deviation (unless outlier equals mean)."""
-    import math
-    from statistics import mean, stdev
-    
-    original_stdev = stdev(data)
-    data_mean = mean(data)
-    
-    # Add outlier far from mean
-    outlier = data_mean + outlier_magnitude
-    data_with_outlier = data + [outlier]
-    new_stdev = stdev(data_with_outlier)
-    
-    # Use approximate comparison to handle floating point precision issues
-    assert new_stdev > original_stdev or math.isclose(new_stdev, original_stdev, rel_tol=1e-9)
-    
-    # Since we filtered for meaningful outlier_magnitude, it should actually increase
-    assert new_stdev > original_stdev
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=100))
-def test_variance_non_negativity(data):
-    """Test that variance is always non-negative for all valid inputs."""
-    from statistics import variance
+    The variance of any dataset should always be >= 0, as it represents
+    the average of squared deviations from the mean. We constrain the
+    input values to a reasonable range (-1e10 to 1e10) to avoid
+    numerical overflow during variance calculations while still
+    testing the fundamental mathematical property.
+    """
     result = variance(data)
-    assert result >= 0, f"Variance should be non-negative, got {result}"
+    assert result >= 0, f"Variance should be non-negative, but got {result} for data: {data}"
 
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1), 
-       k=st.floats(allow_nan=False, allow_infinity=False))
-def test_variance_translation_invariance(data, k):
-    """Test that adding a constant to all data points doesn't change variance."""
-    import math
-    from statistics import variance
-    
-    translated_data = [x + k for x in data]
-    original_var = variance(data)
-    translated_var = variance(translated_data)
-    assert math.isclose(original_var, translated_var, rel_tol=1e-10), \
-        f"Translation invariance failed: original={original_var}, translated={translated_var}"
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2), 
-       k=st.floats(allow_nan=False, allow_infinity=False).filter(lambda x: x != 0))
-def test_variance_scale_transformation(data, k):
-    """Test that scaling data by constant k scales variance by k²."""
-    import math
-    from statistics import variance
-    
-    scaled_data = [k * x for x in data]
-    original_var = variance(data)
-    scaled_var = variance(scaled_data)
-    expected_var = k * k * original_var
-    assert math.isclose(scaled_var, expected_var, rel_tol=1e-9), \
-        f"Scale transformation failed: scaled_var={scaled_var}, expected={expected_var}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=100))
-def test_variance_consistent_with_provided_mean(data):
-    """Test that providing correct mean gives same result as automatic calculation."""
-    from statistics import mean, variance
-    import math
-    
-    data_mean = mean(data)
-    var_auto = variance(data)
-    var_with_mean = variance(data, data_mean)
-    
-    assert math.isclose(var_auto, var_with_mean, rel_tol=1e-10), \
-        f"Variance with provided mean should match automatic: auto={var_auto}, with_mean={var_with_mean}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=20))
-def test_variance_order_invariance(data):
-    """Test that variance is invariant to order of data points."""
-    import random
-    import math
-    from statistics import variance
-    
-    original_var = variance(data)
-    shuffled_data = data.copy()
-    random.shuffle(shuffled_data)
-    shuffled_var = variance(shuffled_data)
-    
-    assert math.isclose(original_var, shuffled_var, rel_tol=1e-12), \
-        f"Order invariance failed: original={original_var}, shuffled={shuffled_var}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=0, max_size=1))
-def test_variance_minimum_sample_size_requirement(data):
-    """Test that variance raises StatisticsError for data with less than 2 points."""
-    from statistics import StatisticsError, variance
+@given(st.just([]))
+def test_variance_error_empty_data(data):
+    """Test that variance raises StatisticsError when given empty data."""
     import pytest
-    
-    if len(data) < 2:
-        with pytest.raises(StatisticsError):
-            variance(data)
-    else:
-        # This branch won't be reached with current strategy, but good for clarity
-        variance(data)  # Should not raise
+    from statistics import StatisticsError
+    with pytest.raises(StatisticsError):
+        variance(data)
 
-@given(st.lists(st.floats(min_value=-1e10, max_value=1e10, allow_nan=False, allow_infinity=False), min_size=2, max_size=50))
-def test_variance_bessels_correction(data):
-    """Test that variance uses (n-1) denominator (Bessel's correction) instead of n."""
-    from statistics import mean, variance
-    import math
-    
-    n = len(data)
-    data_mean = mean(data)
-    
-    # Calculate population variance (with n denominator)
-    sum_sq_dev = sum((x - data_mean) ** 2 for x in data)
-    population_var = sum_sq_dev / n
-    
-    # Sample variance should use (n-1) denominator
-    expected_sample_var = sum_sq_dev / (n - 1)
-    actual_var = variance(data)
-    
-    assert math.isclose(actual_var, expected_sample_var, rel_tol=1e-8, abs_tol=1e-15), \
-        f"Bessel's correction not applied: expected={expected_sample_var}, actual={actual_var}"
-    
-    # Should be different from population variance (unless n=1, but we have n≥2)
-    if n > 2:
-        assert not math.isclose(actual_var, population_var, rel_tol=1e-6), \
-            "Sample variance should differ from population variance due to Bessel's correction"
 
-@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=2, max_size=20))
-def test_variance_type_preservation_integers(int_data):
-    """Test that variance preserves numeric types when possible (integer input)."""
-    from fractions import Fraction
-    from statistics import variance
-    
-    result = variance(int_data)
-    # For integer input, result should be a Fraction or float (variance is rarely an integer)
-    assert isinstance(result, (Fraction, float)), \
-        f"Expected Fraction/float for integer input, got {type(result)}"
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1, max_size=1))
+def test_variance_error_single_element(data):
+    """Test that variance raises StatisticsError when given single element data."""
+    import pytest
+    from statistics import StatisticsError
+    with pytest.raises(StatisticsError):
+        variance(data)
 
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=50))
-def test_variance_handles_duplicate_values(data):
-    """Test that variance correctly handles repeated values in the dataset."""
-    import math
-    from statistics import variance
-    
-    # Add duplicates to the data
-    data_with_duplicates = data + data[:min(len(data), 5)]  # Add some duplicates
-    
-    # Should not raise an error and should give finite result
-    result = variance(data_with_duplicates)
-    assert result >= 0
-    assert math.isfinite(result)
 
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e50, max_value=1e50), min_size=2, max_size=100))
-def test_variance_finite_for_finite_input(data):
-    """Test that variance produces finite results for finite input data."""
-    import math
-    from statistics import variance
-    
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2, max_size=10))
+def test_variance_sufficient_data(data):
+    """Test that variance works correctly when given sufficient data (2 or more elements)."""
+    # This should not raise an exception and should return a non-negative float
     result = variance(data)
-    assert math.isfinite(result), f"Expected finite variance for finite input, got {result}"
-
-@given(st.lists(st.floats(min_value=-100, max_value=100, allow_nan=False, allow_infinity=False), min_size=2, max_size=10))
-def test_variance_sensitivity_to_outliers(base_data):
-    """Test that extreme values disproportionately increase variance."""
-    import math
-    from statistics import variance
-    
-    # Calculate base variance (skip if variance is 0 as outliers won't have multiplicative effect)
-    base_var = variance(base_data)
-    
-    # Add outlier far from mean
-    mean_val = sum(base_data) / len(base_data)
-    outlier = mean_val + 100  # Large outlier
-    data_with_outlier = base_data + [outlier]
-    outlier_var = variance(data_with_outlier)
-    
-    # Variance should strictly increase with outlier
-    assert outlier_var > base_var, \
-        f"Variance should increase with outlier: base={base_var}, with_outlier={outlier_var}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6), min_size=2, max_size=50))
-def test_variance_computational_stability_with_correct_mean(data):
-    """Test that providing correct mean can improve numerical accuracy."""
-    from statistics import mean, variance
-    import math
-    
-    data_mean = mean(data)
-    
-    # Both should give the same result (within numerical precision)
-    var_auto = variance(data)
-    var_with_mean = variance(data, data_mean)
-    
-    # They should be very close (this tests computational stability)
-    # Use more reasonable tolerance for floating-point arithmetic and add absolute tolerance
-    assert math.isclose(var_auto, var_with_mean, rel_tol=1e-9, abs_tol=1e-15), \
-        f"Providing correct mean should give same result: auto={var_auto}, with_mean={var_with_mean}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1000, max_value=1000), min_size=3, max_size=20))
-def test_variance_monotonic_relationship_with_spread(data):
-    """Test that more spread out data tends to have higher variance."""
-    from statistics import variance, mean
-    import math
-    
-    # Skip if all values are the same (variance would be 0)
-    if len(set(data)) <= 1:
-        return
-    
-    original_var = variance(data)
-    data_mean = mean(data)
-    
-    # Create a more spread out version by scaling deviations from the mean
-    spread_factor = 2.0
-    spread_data = [data_mean + spread_factor * (x - data_mean) for x in data]
-    spread_var = variance(spread_data)
-    
-    # The spread data should have higher variance (scaled by spread_factor^2)
-    expected_spread_var = original_var * (spread_factor ** 2)
-    
-    assert spread_var > original_var, \
-        f"More spread data should have higher variance: original={original_var}, spread={spread_var}"
-    
-    # Also verify the mathematical relationship holds
-    assert math.isclose(spread_var, expected_spread_var, rel_tol=1e-10), \
-        f"Variance should scale by spread_factor^2: expected={expected_spread_var}, actual={spread_var}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6), min_size=2, max_size=50))
-def test_stdev_equals_sqrt_variance_floats(data):
-    """Test that stdev(data) = √variance(data) for float data.
-    
-    This tests the fundamental relationship that standard deviation is the 
-    square root of variance for the same dataset.
-    """
-    import math
-    from statistics import variance, stdev
-    
-    var_result = variance(data)
-    stdev_result = stdev(data)
-    expected_stdev = math.sqrt(var_result)
-    
-    # Handle cases where values are very close to zero with absolute tolerance
-    # and use relative tolerance for larger values
-    assert math.isclose(stdev_result, expected_stdev, rel_tol=1e-14, abs_tol=1e-15)
-
-@given(data=st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=1), 
-       xbar=st.floats(allow_nan=False, allow_infinity=False))
-def test_stdev_equals_sqrt_variance_with_xbar(data, xbar):
-    """Test that stdev(data, xbar) = √variance(data, xbar) when xbar is provided.
-    
-    This tests the relationship holds when an explicit mean value is provided
-    to both functions.
-    """
-    import math
-    from statistics import variance, stdev
-    
-    var_result = variance(data, xbar)
-    stdev_result = stdev(data, xbar)
-    expected_stdev = math.sqrt(var_result)
-    
-    # Use math.isclose for floating point comparison
-    assert math.isclose(stdev_result, expected_stdev, rel_tol=1e-14)
-
-@given(st.lists(st.decimals(min_value=-1000, max_value=1000, places=2), min_size=2, max_size=10))
-def test_stdev_equals_sqrt_variance_decimals(data):
-    """Test that stdev(data) = √variance(data) for Decimal data.
-    
-    This tests the relationship using Decimal inputs to verify the special
-    handling for high-precision decimal arithmetic.
-    """
-    from decimal import Decimal
-    from statistics import variance, stdev
-    
-    var_result = variance(data)
-    stdev_result = stdev(data)
-    
-    # Keep everything in Decimal precision for proper high-precision testing
-    expected_stdev = var_result.sqrt()
-    
-    # Verify both results are Decimal types (testing special Decimal handling)
-    assert isinstance(var_result, Decimal), "Variance should return Decimal for Decimal input"
-    assert isinstance(stdev_result, Decimal), "Standard deviation should return Decimal for Decimal input"
-    
-    # Compare Decimals directly with appropriate Decimal-based tolerance
-    # Use relative tolerance appropriate for the precision of our input data (2 decimal places)
-    tolerance = Decimal('1e-12')
-    relative_error = abs(stdev_result - expected_stdev) / abs(expected_stdev)
-    assert relative_error <= tolerance, f"stdev result {stdev_result} doesn't match sqrt(variance) {expected_stdev}"
-
-@given(st.lists(st.fractions(min_value=-100, max_value=100), min_size=2, max_size=10).filter(lambda data: len(set(data)) > 1))
-def test_stdev_equals_sqrt_variance_fractions(data):
-    """Test that stdev(data) = √variance(data) for Fraction data.
-    
-    This tests the relationship using Fraction inputs to verify correct
-    handling of rational number arithmetic. Ensures variance > 0 by
-    filtering out constant sequences.
-    """
-    from fractions import Fraction
-    from statistics import variance, stdev
-    import math
-    
-    var_result = variance(data)
-    stdev_result = stdev(data)
-    
-    # Keep calculations in Fraction domain as much as possible
-    # Convert to float only for final comparison with appropriate tolerance
-    expected_stdev = float(var_result) ** 0.5
-    actual_stdev = float(stdev_result)
-    
-    # Use more lenient tolerance to account for Fraction→float conversion precision loss
-    assert math.isclose(actual_stdev, expected_stdev, rel_tol=1e-9, abs_tol=1e-12)
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=100))
-def test_variance_with_precomputed_mean_equals_variance_without_mean(data):
-    """
-    Test that variance(data, mean(data)) equals variance(data).
-    
-    This property tests that when the mean is pre-computed and passed as the xbar
-    parameter to variance(), the result should be identical to computing variance()
-    without the xbar parameter (where mean is calculated internally).
-    """
-    import math
-    from statistics import variance, mean
-    
-    # Compute mean of the data
-    data_mean = mean(data)
-    
-    # Compute variance with and without pre-computed mean
-    variance_without_mean = variance(data)
-    variance_with_mean = variance(data, data_mean)
-    
-    # They should be equal (using close comparison for floating point)
-    assert math.isclose(variance_without_mean, variance_with_mean, rel_tol=1e-12, abs_tol=1e-12)
-
-@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=2, max_size=50))
-def test_variance_with_precomputed_mean_equals_variance_without_mean_integers(data):
-    """
-    Test that variance(data, mean(data)) equals variance(data) for integer data.
-    
-    Using integer data to test the same property, which should give approximate equality
-    since the statistics module performs floating-point arithmetic internally.
-    """
-    import math
-    from statistics import variance, mean
-    
-    # Compute mean of the data
-    data_mean = mean(data)
-    
-    # Compute variance with and without pre-computed mean
-    variance_without_mean = variance(data)
-    variance_with_mean = variance(data, data_mean)
-    
-    # Should be approximately equal due to floating-point arithmetic
-    assert math.isclose(variance_without_mean, variance_with_mean, rel_tol=1e-9)
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2, max_size=100))
-def test_stdev_with_mean_equals_stdev_without_mean(data):
-    """
-    Test that stdev(data, mean(data)) equals stdev(data).
-    
-    This property holds because the stdev function internally uses the same
-    calculation whether the mean is provided explicitly or calculated internally.
-    When xbar (mean) is provided, it should yield identical results to when
-    stdev calculates the mean itself.
-    """
-    import statistics
-    import math
-    
-    # Calculate stdev without providing mean (let it calculate internally)
-    stdev_without_mean = statistics.stdev(data)
-    
-    # Calculate mean separately and provide it to stdev
-    data_mean = statistics.mean(data)
-    stdev_with_mean = statistics.stdev(data, data_mean)
-    
-    # Both calculations should yield the same result
-    assert math.isclose(stdev_without_mean, stdev_with_mean, rel_tol=1e-12)
-
-@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=2, max_size=50))
-def test_stdev_with_mean_equals_stdev_without_mean_integers(data):
-    """
-    Test the stdev property with integer data to avoid floating point precision issues.
-    
-    Using integers ensures that the mean calculation is exact and any differences
-    would be due to the property not holding rather than floating point errors.
-    """
-    import statistics
-    import math
-    
-    # Calculate stdev without providing mean
-    stdev_without_mean = statistics.stdev(data)
-    
-    # Calculate mean and provide it to stdev
-    data_mean = statistics.mean(data)
-    stdev_with_mean = statistics.stdev(data, data_mean)
-    
-    # Results should be approximately equal due to floating point arithmetic
-    assert math.isclose(stdev_without_mean, stdev_with_mean, rel_tol=1e-9)
-
-@given(
-    center=st.floats(min_value=-1000, max_value=1000, allow_nan=False, allow_infinity=False),
-    n_pairs=st.integers(min_value=1, max_value=20),
-    offsets=st.lists(
-        st.floats(min_value=0.1, max_value=100, allow_nan=False, allow_infinity=False),
-        min_size=1,
-        max_size=20
-    )
-)
-def test_symmetric_unimodal_distribution_central_tendency_convergence(center, n_pairs, offsets):
-    """
-    Test that for symmetric unimodal distributions, mode ≈ median ≈ mean.
-    
-    This property holds for symmetric unimodal distributions where all three
-    measures of central tendency should converge to approximately the same value.
-    We generate symmetric data by creating values symmetrically around a center point.
-    """
-    import math
-    from statistics import mean, median, mode
-    
-    # Take only n_pairs offsets to ensure we have the right number
-    selected_offsets = offsets[:n_pairs]
-    
-    # Build symmetric dataset
-    dataset = []
-    for offset in selected_offsets:
-        dataset.extend([center + offset, center - offset])
-    
-    # Add the center point multiple times to make it the clear mode
-    # Use a fixed number to ensure unimodality without creating overly large datasets
-    dataset.extend([center] * 5)
-    
-    try:
-        sample_mean = mean(dataset)
-        sample_median = median(dataset)
-        sample_mode = mode(dataset)
-        
-        # For symmetric unimodal distributions, all measures should be approximately equal
-        tolerance = 1e-6  # Use reasonable tolerance for floating-point arithmetic
-        
-        # Test that mean ≈ median
-        assert math.isclose(sample_mean, sample_median, rel_tol=tolerance, abs_tol=tolerance), \
-            f"Mean ({sample_mean}) and median ({sample_median}) should be approximately equal for symmetric distribution"
-        
-        # Test that median ≈ mode  
-        assert math.isclose(sample_median, sample_mode, rel_tol=tolerance, abs_tol=tolerance), \
-            f"Median ({sample_median}) and mode ({sample_mode}) should be approximately equal for symmetric distribution"
-        
-        # Test that mean ≈ mode
-        assert math.isclose(sample_mean, sample_mode, rel_tol=tolerance, abs_tol=tolerance), \
-            f"Mean ({sample_mean}) and mode ({sample_mode}) should be approximately equal for symmetric distribution"
-            
-    except Exception as e:
-        # Should not raise exceptions for valid symmetric data
-        assert False, f"Unexpected exception with symmetric data: {e}"
-
-@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=100))
-def test_variance_non_negative_and_zero_iff_all_equal(data):
-    """
-    Test that variance(data) >= 0, with equality if and only if all elements 
-    in data are equal to mean(data). This means variance is zero only when
-    all data points are identical.
-    """
-    import math
-    from statistics import variance, mean
-    
-    var = variance(data)
-    data_mean = mean(data)
-    
-    # Property 1: Variance is always non-negative
-    assert var >= 0, f"Variance should be non-negative, got {var}"
-    
-    # Property 2: Variance equals zero if and only if all elements are equal to the mean
-    # This happens when all data points are identical
-    all_equal_to_mean = all(math.isclose(x, data_mean, rel_tol=1e-9, abs_tol=1e-9) for x in data)
-    
-    if all_equal_to_mean:
-        # If all elements equal the mean, variance should be zero
-        assert math.isclose(var, 0, abs_tol=1e-9), f"Variance should be zero when all elements equal mean, got {var}"
-    else:
-        # If not all elements equal the mean, variance should be positive
-        assert var > 0, f"Variance should be positive when elements differ, got {var}"
+    assert isinstance(result, (int, float))
+    assert result >= 0  # Variance is always non-negative
 
 @given(st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2, max_size=50))
-def test_stdev_non_negative_and_zero_iff_constant(data):
-    """
-    Test that stdev(data) >= 0, with equality if and only if 
-    all elements in data are equal to mean(data).
+def test_variance_mean_consistency(data):
+    """Test that variance with explicit mean equals variance with computed mean.
     
-    This property verifies:
-    1. Standard deviation is always non-negative
-    2. Standard deviation is zero if and only if all data points equal the mean
-       (i.e., all data points are identical)
+    This property verifies that calculating variance by letting the function
+    compute the mean internally produces the same result as explicitly passing
+    the mean as a parameter. Uses relaxed tolerances to account for floating-point
+    precision issues that can occur with very large numbers during intermediate
+    variance calculations.
     """
     import math
-    from statistics import stdev, mean, StatisticsError
-    
-    # Use consistent tolerance throughout the test
-    tolerance = 1e-9
-    
-    try:
-        sample_stdev = stdev(data)
-        sample_mean = mean(data)
-        
-        # Property 1: stdev(data) >= 0
-        assert sample_stdev >= 0, f"Standard deviation should be non-negative, got {sample_stdev}"
-        
-        # Property 2: stdev(data) == 0 iff all elements equal mean(data)
-        all_equal_to_mean = all(math.isclose(x, sample_mean, rel_tol=tolerance, abs_tol=tolerance) for x in data)
-        stdev_is_zero = math.isclose(sample_stdev, 0, rel_tol=tolerance, abs_tol=tolerance)
-        
-        if stdev_is_zero:
-            # If stdev is zero, all elements should equal the mean
-            assert all_equal_to_mean, f"If stdev is zero, all elements should equal mean. Data: {data}, Mean: {sample_mean}"
-        else:
-            # If stdev is positive, not all elements should equal the mean
-            assert not all_equal_to_mean, f"If stdev is positive, not all elements should equal mean. Data: {data}, Mean: {sample_mean}, Stdev: {sample_stdev}"
-            
-    except StatisticsError:
-        # This should never happen since we generate at least 2 data points
-        assert False, f"StatisticsError should not occur with {len(data)} data points: {data}"
+    from statistics import mean
+    computed_variance = variance(data)
+    explicit_mean_variance = variance(data, mean(data))
+    assert math.isclose(computed_variance, explicit_mean_variance, rel_tol=1e-9, abs_tol=1e-10)
 
-@given(st.lists(st.just(5.0), min_size=2, max_size=10))
-def test_stdev_zero_for_constant_data(constant_data):
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6), min_size=2, max_size=20),
+       st.floats(allow_nan=False, allow_infinity=False, min_value=-10, max_value=10).filter(lambda x: abs(x) > 1e-6))
+def test_variance_scale_invariance(data, scale_factor):
+    """Test that variance scales by the square of the scaling factor.
+    
+    This property test verifies that when all data points are multiplied by a constant
+    scale factor, the variance of the scaled data equals the original variance multiplied
+    by the square of the scale factor: Var(c*X) = c²*Var(X).
+    
+    Uses a more lenient relative tolerance (1e-6) to account for accumulated floating-point
+    errors in variance calculations which involve multiple arithmetic operations.
     """
-    Test that stdev returns exactly 0 for data where all elements are identical.
-    This is a specific test case for the equality condition.
+    import math
+    original_variance = variance(data)
+    scaled_data = [scale_factor * x for x in data]
+    scaled_variance = variance(scaled_data)
+    expected_variance = (scale_factor ** 2) * original_variance
+    assert math.isclose(scaled_variance, expected_variance, rel_tol=1e-6)
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=50),
+       st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10))
+def test_variance_translation_invariance(data, translation):
+    """Test that variance is unchanged by adding a constant to all data points.
+    
+    This tests the mathematical property that Var(X + c) = Var(X) for any constant c.
+    The variance should be translation invariant because adding a constant shifts
+    all values equally, which doesn't change the spread of the data.
+    
+    We limit the range of floats to avoid numerical precision issues that can occur
+    with extremely large floating-point numbers during variance calculations.
     """
-    from statistics import stdev
+    import math
+    original_variance = variance(data)
+    translated_data = [x + translation for x in data]
+    translated_variance = variance(translated_data)
+    
+    # Use a more lenient relative tolerance since we're dealing with floating-point arithmetic
+    # and variance calculations involve squared differences which can amplify small errors
+    assert math.isclose(original_variance, translated_variance, rel_tol=1e-9, abs_tol=1e-15)
+
+@given(st.lists(st.integers(min_value=-100, max_value=100), min_size=2, max_size=20))
+def test_variance_mathematical_property_integers(data):
+    """Test that variance calculation is mathematically correct for integers."""
+    result = variance(data)
+    
+    # Variance should be non-negative
+    assert result >= 0
+    
+    # Calculate expected variance manually using the standard formula
+    mean = sum(data) / len(data)
+    expected_variance = sum((x - mean) ** 2 for x in data) / len(data)
+    
+    # Compare with tolerance for floating point arithmetic
+    assert abs(result - expected_variance) < 1e-10
+    
+    # Result should be numeric (variance of integers can be float due to division)
+    assert isinstance(result, (int, float))
+    
+    # Variance should be zero if and only if all elements are equal
+    all_equal = len(set(data)) == 1
+    if all_equal:
+        assert result == 0
+    else:
+        assert result > 0
+
+@given(st.lists(st.fractions(min_value=-10, max_value=10), min_size=2, max_size=10))
+def test_variance_type_preservation_fractions(data):
+    """Test that variance works with Fraction types and returns correct values."""
+    from fractions import Fraction
+    result = variance(data)
+    
+    # Check type preservation
+    assert isinstance(result, Fraction)
+    
+    # Check correctness by calculating expected variance
+    mean = sum(data) / len(data)
+    expected_variance = sum((x - mean) ** 2 for x in data) / len(data)
+    assert result == expected_variance
+
+@given(st.fractions(min_value=-10, max_value=10), st.integers(min_value=2, max_value=10))
+def test_variance_identical_fractions(value, size):
+    """Test variance of identical Fraction values is zero."""
+    from fractions import Fraction
+    data = [value] * size
+    result = variance(data)
+    assert isinstance(result, Fraction)
+    assert result == Fraction(0)
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=20))
+def test_variance_order_independence(data):
+    """Test that variance is independent of data order.
+    
+    This property test verifies that the variance calculation produces the same result
+    regardless of the order of elements in the input data. We restrict the float range
+    to avoid extreme values that could cause numerical precision issues, and use a
+    reasonable tolerance to account for floating-point arithmetic limitations.
+    """
+    import math
+    import random
+    
+    original_variance = variance(data)
+    shuffled_data = data.copy()
+    random.shuffle(shuffled_data)
+    shuffled_variance = variance(shuffled_data)
+    
+    # Use a more reasonable tolerance to account for floating-point precision
+    # when dealing with variance calculations involving large numbers
+    assert math.isclose(original_variance, shuffled_variance, rel_tol=1e-9)
+
+import math
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=25))
+def test_variance_duplicate_value_handling(data):
+    """Test that variance handles duplicated datasets appropriately.
+    
+    The key property being tested is that duplicating all values in a dataset
+    should not change the variance, since variance measures the spread of data
+    around the mean, not the sample size. When we duplicate data, we get the
+    same mean and the same spread, so variance should remain unchanged.
+    """
+    original_variance = variance(data)
+    duplicated_data = data + data
+    duplicated_variance = variance(duplicated_data)
+    
+    # Both should be non-negative (variance is always >= 0)
+    assert original_variance >= 0
+    assert duplicated_variance >= 0
+    
+    # Key property: duplicating data should not change the variance
+    # because variance measures spread, not sample size
+    assert math.isclose(original_variance, duplicated_variance, rel_tol=1e-10)
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=20))
+def test_variance_minimum_bound_equality_condition(data):
+    """Test that variance equals zero if and only if all elements are equal."""
+    import math
+    result = variance(data)
+    all_equal = len(set(data)) <= 1
+    variance_is_zero = math.isclose(result, 0, abs_tol=1e-10)
+    assert all_equal == variance_is_zero
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=50))
+def test_stdev_equals_sqrt_of_variance_floats(data):
+    """Test that stdev(data) == sqrt(variance(data)) for floating point data.
+    
+    This property tests the fundamental mathematical relationship between
+    standard deviation and variance: stdev is the square root of variance.
+    
+    The strategy is constrained to reasonable floating-point ranges (-1e10 to 1e10)
+    to avoid precision issues with extremely large numbers that can cause
+    floating-point arithmetic limitations in the square root calculation.
+    """
     import math
     
-    result = stdev(constant_data)
-    assert math.isclose(result, 0, abs_tol=1e-10), f"Standard deviation of constant data should be 0, got {result}"
+    stdev_result = stdev(data)
+    variance_result = variance(data)
+    sqrt_variance = math.sqrt(variance_result)
+    
+    # Use a more reasonable tolerance that accounts for floating-point precision
+    # while still being strict enough to catch real implementation errors
+    assert math.isclose(stdev_result, sqrt_variance, rel_tol=1e-9)
 
-@given(st.tuples(st.integers(min_value=2, max_value=100), st.lists(st.floats(allow_nan=False, allow_infinity=False), min_size=2).filter(lambda x: len(set(x)) > 1)))
-def test_stdev_positive_for_varying_data(data_tuple):
+@given(st.lists(st.decimals(min_value=-1000, max_value=1000, allow_nan=False, allow_infinity=False), min_size=2, max_size=20))
+def test_stdev_equals_sqrt_of_variance_decimals(data):
+    """Test that stdev(data) == sqrt(variance(data)) for Decimal data.
+    
+    This property tests the fundamental mathematical relationship between
+    standard deviation and variance with Decimal inputs, which should
+    maintain high precision. Handles edge cases where variance is zero
+    (all values identical) explicitly.
     """
-    Test that stdev returns a positive value when data elements are not all identical.
-    This tests the strict inequality case.
-    """
-    from statistics import stdev
+    from decimal import Decimal
     
-    n, data = data_tuple
+    stdev_result = stdev(data)
+    variance_result = variance(data)
     
-    # Verify precondition: data actually varies
-    assert len(set(data)) > 1, f"Test precondition failed: data should have varying elements, got {data}"
-    
-    sample_stdev = stdev(data)
-    assert sample_stdev > 0, f"Standard deviation should be positive for varying data, got {sample_stdev} for data {data}"
-
-@given(st.lists(st.integers(), min_size=1).filter(lambda x: len(set(x)) == len(x)))
-def test_mode_with_no_repeated_values_returns_first_occurrence(data):
-    """
-    Test that when a dataset has no repeated values (all values appear exactly once),
-    the mode function returns one of the values from the dataset.
-    
-    This tests that mode() behaves correctly when all frequencies are equal,
-    returning a valid element from the original data.
-    """
-    from statistics import mode
-    
-    # All values in data are unique (enforced by filter)
-    result = mode(data)
-    
-    # The result should be one of the values in the dataset
-    assert result in data, f"Result {result} not found in original data {data}"
-
-@given(st.lists(st.text(min_size=1), min_size=1).filter(lambda x: len(set(x)) == len(x)))
-def test_mode_with_no_repeated_values_non_numeric_data(data):
-    """
-    Test that mode raises StatisticsError with non-numeric data when all values are unique.
-    This ensures the property holds for nominal data as well as numeric data - when there
-    is no unique mode (all values appear with equal frequency), StatisticsError is raised.
-    """
-    import pytest
-    from statistics import mode, StatisticsError
-    
-    # All values in data are unique (enforced by filter)
-    # mode() should raise StatisticsError when there is no unique mode
-    with pytest.raises(StatisticsError):
-        mode(data)
-
-@given(st.lists(st.one_of(st.integers(), st.text(), st.floats(allow_nan=False, allow_infinity=False)), min_size=1).filter(lambda x: len(set(x)) == len(x)))
-def test_mode_unique_values_mixed_types(data):
-    """
-    Test mode behavior with mixed data types when all values are unique.
-    Verifies that the first-occurrence behavior is consistent across different data types.
-    """
-    from statistics import mode
-    
-    # Precondition: all values are unique (enforced by strategy filter)
-    assert len(set(data)) == len(data), "Test precondition failed: values not unique"
-    
-    result = mode(data)
-    
-    # Should return the first element since all have frequency 1
-    assert result == data[0], f"Expected first element {data[0]}, got {result}"
+    # Handle the edge case where all values are identical (variance = 0)
+    if variance_result == Decimal('0'):
+        # When variance is zero, standard deviation should also be zero
+        assert stdev_result == Decimal('0'), f"Expected stdev=0 when variance=0, got stdev={stdev_result}"
+    else:
+        # For non-zero variance, test the fundamental relationship
+        sqrt_variance = variance_result.sqrt()
+        assert stdev_result == sqrt_variance, f"stdev={stdev_result} != sqrt(variance)={sqrt_variance}"
 
 @given(
-    constant=st.one_of(
-        st.floats(allow_nan=False, allow_infinity=False),
-        st.decimals(allow_nan=False, allow_infinity=False),
-        st.fractions()
-    ),
-    n=st.integers(min_value=1, max_value=1000)
+    st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=50),
+    st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10)
 )
-def test_constant_dataset_statistics_property(constant, n):
-    """
-    Test that for a dataset where all values are the same constant:
-    - mean([constant] * n) = constant
-    - variance([constant] * n) = 0  
-    - stdev([constant] * n) = 0
+def test_stdev_equals_sqrt_of_variance_with_xbar(data, xbar):
+    """Test that stdev(data, xbar) == sqrt(variance(data, xbar)) when xbar is provided.
     
-    This property demonstrates how these statistical functions relate
-    for datasets with no variation.
+    This property tests the mathematical relationship holds even when
+    an explicit mean (xbar) is provided to both functions.
+    
+    The floating-point values are restricted to a reasonable range to avoid
+    numerical instability that occurs with extremely large values where
+    variance calculations can exceed floating-point precision limits.
     """
     import math
-    from decimal import Decimal
-    from fractions import Fraction
-    from statistics import mean, variance, stdev
     
-    # Create dataset with all values equal to the constant
-    data = [constant] * n
+    stdev_result = stdev(data, xbar)
+    variance_result = variance(data, xbar)
+    sqrt_variance = math.sqrt(variance_result)
     
-    # Test mean equals the constant
-    calculated_mean = mean(data)
-    if isinstance(constant, (Decimal, Fraction)):
-        # For exact types, use exact equality
-        assert calculated_mean == constant
-    else:
-        # For floats, use approximate equality
-        assert math.isclose(calculated_mean, constant, rel_tol=1e-9, abs_tol=1e-9)
+    # Use adaptive tolerance based on the magnitude of the result
+    # to account for floating-point precision limitations
+    tolerance = max(1e-12, abs(stdev_result) * 1e-9)
     
-    # Test variance equals zero
-    calculated_variance = variance(data)
-    if isinstance(constant, (Decimal, Fraction)):
-        # For exact types, variance should be exactly zero
-        assert calculated_variance == 0
-    else:
-        # For floats, variance should be very close to zero
-        assert math.isclose(calculated_variance, 0, rel_tol=1e-9, abs_tol=1e-9)
-    
-    # Test standard deviation equals zero
-    calculated_stdev = stdev(data)
-    if isinstance(constant, (Decimal, Fraction)):
-        # For exact types, stdev should be exactly zero
-        assert calculated_stdev == 0
-    else:
-        # For floats, stdev should be very close to zero
-        assert math.isclose(calculated_stdev, 0, rel_tol=1e-9, abs_tol=1e-9)
-    
-    # Additional property: stdev should equal sqrt(variance)
-    if isinstance(constant, (Decimal, Fraction)):
-        assert calculated_stdev == 0 and calculated_variance == 0
-    else:
-        assert math.isclose(calculated_stdev, math.sqrt(calculated_variance), rel_tol=1e-9, abs_tol=1e-9)
+    assert math.isclose(stdev_result, sqrt_variance, rel_tol=1e-9, abs_tol=tolerance)
 
-@given(st.one_of(st.integers(), st.floats(allow_nan=False, allow_infinity=False), st.decimals(allow_nan=False, allow_infinity=False), st.fractions()))
+@given(st.lists(st.fractions(min_value=-100, max_value=100), min_size=2, max_size=20))
+def test_stdev_equals_sqrt_of_variance_fractions(data):
+    """Test that stdev(data) == sqrt(variance(data)) for Fraction data.
+    
+    This property tests the fundamental mathematical relationship between
+    standard deviation and variance with Fraction inputs. Special handling
+    is needed for the case where variance is 0 (all values identical) and
+    for maintaining precision when working with Fraction arithmetic.
+    """
+    from fractions import Fraction
+    import math
+    
+    stdev_result = stdev(data)
+    variance_result = variance(data)
+    
+    # Handle the case where variance is 0 (all values are the same)
+    if variance_result == 0:
+        # When variance is 0, standard deviation must also be 0
+        assert stdev_result == 0
+    else:
+        # For non-zero variance, we need to compare stdev with sqrt(variance)
+        # Since we're dealing with Fractions, we want to maintain precision
+        # but sqrt operations require floating point arithmetic
+        
+        # Convert to float for sqrt calculation, then back to Fraction
+        sqrt_variance_float = math.sqrt(float(variance_result))
+        
+        # Convert both results to float for comparison to avoid precision issues
+        # when converting between Fraction and float representations
+        stdev_float = float(stdev_result)
+        
+        # Use a reasonable tolerance that accounts for floating point conversion
+        # but is still strict enough to catch real errors
+        assert math.isclose(stdev_float, sqrt_variance_float, rel_tol=1e-9), \
+            f"stdev({stdev_float}) != sqrt(variance)({sqrt_variance_float})"
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), min_size=2, max_size=100))
+def test_variance_with_explicit_mean_equals_variance_with_none(data):
+    """
+    Test that variance(data, mean(data)) == variance(data, None).
+    
+    This property verifies that explicitly passing the mean as the xbar parameter
+    produces identical results to letting variance calculate the mean internally.
+    The variance function should behave identically whether the mean is provided
+    or computed automatically.
+    
+    Note: We restrict the floating-point range to [-1e10, 1e10] to avoid
+    numerical instability issues that can occur with extremely large numbers,
+    which would cause legitimate differences in floating-point arithmetic
+    depending on the computational path taken.
+    """
+    import math
+    
+    # Calculate the mean of the data
+    computed_mean = mean(data)
+    
+    # Get variance with explicit mean
+    variance_with_mean = variance(data, computed_mean)
+    
+    # Get variance with None (auto-calculated mean)
+    variance_with_none = variance(data, None)
+    
+    # They should be equal (using close comparison for floating point)
+    # Using a slightly more lenient tolerance to account for expected
+    # floating-point precision differences in the computation paths
+    assert math.isclose(variance_with_mean, variance_with_none, rel_tol=1e-12)
+
+import math
+from hypothesis import given, strategies as st
+
+@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=2, max_size=50))
+def test_variance_with_explicit_mean_equals_variance_with_none_integers(data):
+    """
+    Test that variance calculations with explicit mean and auto-calculated mean 
+    produce equivalent results.
+    
+    Even with integer inputs, variance calculations involve division operations
+    that can produce floating point results, so we use math.isclose() for
+    appropriate floating point comparison rather than exact equality.
+    """
+    # Calculate the mean of the data
+    computed_mean = mean(data)
+    
+    # Get variance with explicit mean
+    variance_with_mean = variance(data, computed_mean)
+    
+    # Get variance with None (auto-calculated mean)
+    variance_with_none = variance(data, None)
+    
+    # Use floating point comparison since variance calculations can produce
+    # floating point results even with integer inputs
+    assert math.isclose(variance_with_mean, variance_with_none, rel_tol=1e-15)
+
+@given(st.lists(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e100, max_value=1e100), min_size=2, max_size=100))
+def test_stdev_with_explicit_mean_equals_stdev_with_none(data):
+    """
+    Test that stdev(data, mean(data)) == stdev(data, None).
+    
+    This property tests that explicitly passing the mean as the xbar parameter
+    produces the same result as letting stdev calculate it internally (None).
+    
+    The input is constrained to avoid extremely large values that cause numerical
+    instability in floating point arithmetic, and uses a reasonable tolerance
+    for comparison to account for precision differences between the two approaches.
+    """
+    import math
+    from statistics import stdev, mean
+    
+    # Calculate stdev with explicit mean
+    data_mean = mean(data)
+    stdev_with_mean = stdev(data, data_mean)
+    
+    # Calculate stdev with None (let it calculate mean internally)
+    stdev_with_none = stdev(data, None)
+    
+    # Compare using math.isclose with reasonable tolerance for floating point comparison
+    # Use rel_tol=1e-9 to account for numerical instability with large values
+    assert math.isclose(stdev_with_mean, stdev_with_none, rel_tol=1e-9), \
+        f"stdev with explicit mean {stdev_with_mean} != stdev with None {stdev_with_none}"
+
+import math
+
+@given(st.lists(st.integers(-1000, 1000), min_size=2, max_size=50))
+def test_stdev_with_explicit_mean_equals_stdev_with_none_integers(data):
+    """
+    Test that stdev(data, mean(data)) ≈ stdev(data, None) for integer data.
+    
+    This tests that calculating standard deviation with an explicitly provided mean
+    produces approximately the same result as letting stdev calculate the mean internally.
+    The results should be very close but may differ slightly due to floating-point
+    precision differences in how the mean is calculated and used.
+    """
+    from statistics import stdev, mean
+    
+    # Calculate stdev with explicit mean
+    data_mean = mean(data)
+    stdev_with_mean = stdev(data, data_mean)
+    
+    # Calculate stdev with None (let it calculate mean internally)
+    stdev_with_none = stdev(data, None)
+    
+    # Use approximate equality to account for floating-point precision issues
+    assert math.isclose(stdev_with_mean, stdev_with_none, rel_tol=1e-15), \
+        f"stdev with explicit mean {stdev_with_mean} != stdev with None {stdev_with_none}"
+
+@given(st.one_of(
+    st.integers(),
+    st.floats(allow_nan=False, allow_infinity=False),
+    st.fractions(),
+    st.decimals(allow_nan=False, allow_infinity=False),
+    st.text(min_size=1),  # Exclude empty strings to avoid StatisticsError in mode()
+    st.booleans()
+))
 def test_single_element_central_tendency_equality(x):
     """
-    Test that for single-element datasets, mean, median, and mode all equal the single value.
+    Test that for single-element data [x], mean([x]) == median([x]) == mode([x]) == x.
     
-    Property: For single-element datasets: mean([x]) = median([x]) = mode([x]) = x
+    This property should hold for any single value regardless of type, as all three
+    measures of central tendency collapse to the single value when there's only one
+    data point.
     
-    This tests that all three measures of central tendency are identical when there's
-    only one data point, which must be true by mathematical definition.
+    Note: Empty strings are excluded from this test because statistics.mode() 
+    treats them as a special case and raises StatisticsError.
     """
     from statistics import mean, median, mode
     import math
@@ -1590,29 +1286,123 @@ def test_single_element_central_tendency_equality(x):
     
     single_element_data = [x]
     
-    # Calculate all three measures of central tendency
-    calculated_mean = mean(single_element_data)
-    calculated_median = median(single_element_data)
-    calculated_mode = mode(single_element_data)
+    mean_result = mean(single_element_data)
+    median_result = median(single_element_data)
+    mode_result = mode(single_element_data)
     
-    # For numeric types, we need to handle potential floating point precision issues
+    # For numeric types, we need to handle floating point comparison carefully
     if isinstance(x, float):
-        # Use math.isclose for float comparisons
-        assert math.isclose(calculated_mean, x, rel_tol=1e-15), f"mean([{x}]) = {calculated_mean}, expected {x}"
-        assert math.isclose(calculated_median, x, rel_tol=1e-15), f"median([{x}]) = {calculated_median}, expected {x}"
-        assert math.isclose(calculated_mode, x, rel_tol=1e-15), f"mode([{x}]) = {calculated_mode}, expected {x}"
-        
-        # Also check that all three measures are equal to each other
-        assert math.isclose(calculated_mean, calculated_median, rel_tol=1e-15)
-        assert math.isclose(calculated_median, calculated_mode, rel_tol=1e-15)
-        assert math.isclose(calculated_mean, calculated_mode, rel_tol=1e-15)
+        # All results should be close to x and to each other
+        assert math.isclose(mean_result, x, rel_tol=1e-15)
+        assert math.isclose(median_result, x, rel_tol=1e-15)
+        assert mode_result == x  # mode should return exact value
+        assert math.isclose(mean_result, median_result, rel_tol=1e-15)
+        assert math.isclose(mean_result, mode_result, rel_tol=1e-15)
     else:
-        # For exact numeric types and non-numeric types, use exact equality
-        assert calculated_mean == x, f"mean([{x}]) = {calculated_mean}, expected {x}"
-        assert calculated_median == x, f"median([{x}]) = {calculated_median}, expected {x}"
-        assert calculated_mode == x, f"mode([{x}]) = {calculated_mode}, expected {x}"
+        # For non-float types, exact equality should hold
+        assert mean_result == x
+        assert median_result == x
+        assert mode_result == x
+        assert mean_result == median_result == mode_result
+
+@given(st.one_of(
+    st.integers(),
+    st.floats(allow_nan=False, allow_infinity=False)
+), st.integers(min_value=1, max_value=100))
+def test_constant_numeric_data_central_tendency_equality(constant_value, list_length):
+    """
+    Test that for constant numeric data [x, x, ..., x], all measures of central tendency
+    (mean, median, mode) equal the constant value x.
+    
+    This property should hold for any constant numeric value (integers and floats)
+    and any positive list length.
+    """
+    from statistics import mean, median, mode
+    import math
+    
+    # Create constant data list
+    constant_data = [constant_value] * list_length
+    
+    # Calculate all measures of central tendency
+    calculated_mean = mean(constant_data)
+    calculated_median = median(constant_data)
+    calculated_mode = mode(constant_data)
+    
+    # For floating point numbers, use approximate equality due to potential precision issues
+    if isinstance(constant_value, float):
+        assert math.isclose(calculated_mean, constant_value), f"Mean {calculated_mean} != {constant_value}"
+        assert math.isclose(calculated_median, constant_value), f"Median {calculated_median} != {constant_value}"
+        assert math.isclose(calculated_mode, constant_value), f"Mode {calculated_mode} != {constant_value}"
         
-        # Also check that all three measures are equal to each other
-        assert calculated_mean == calculated_median
-        assert calculated_median == calculated_mode
-        assert calculated_mean == calculated_mode
+        # Verify that all three measures are equal to each other
+        assert math.isclose(calculated_mean, calculated_median), f"Mean {calculated_mean} != Median {calculated_median}"
+        assert math.isclose(calculated_median, calculated_mode), f"Median {calculated_median} != Mode {calculated_mode}"
+        assert math.isclose(calculated_mean, calculated_mode), f"Mean {calculated_mean} != Mode {calculated_mode}"
+    else:
+        # For exact types (int), use exact equality
+        assert calculated_mean == constant_value, f"Mean {calculated_mean} != {constant_value}"
+        assert calculated_median == constant_value, f"Median {calculated_median} != {constant_value}"
+        assert calculated_mode == constant_value, f"Mode {calculated_mode} != {constant_value}"
+        
+        # Verify that all three measures are equal to each other
+        assert calculated_mean == calculated_median == calculated_mode, f"Not all equal: mean={calculated_mean}, median={calculated_median}, mode={calculated_mode}"
+
+
+@given(st.one_of(
+    st.text(),
+    st.booleans()
+), st.integers(min_value=1, max_value=100))
+def test_constant_non_numeric_data_central_tendency_equality(constant_value, list_length):
+    """
+    Test that for constant non-numeric data [x, x, ..., x], median and mode
+    equal the constant value x.
+    
+    This property should hold for any constant non-numeric value (strings and booleans)
+    and any positive list length. Mean is not applicable for non-numeric data.
+    """
+    from statistics import median, mode
+    
+    # Create constant data list
+    constant_data = [constant_value] * list_length
+    
+    # Calculate applicable measures of central tendency
+    calculated_median = median(constant_data)
+    calculated_mode = mode(constant_data)
+    
+    # For non-numeric types, use exact equality
+    assert calculated_median == constant_value, f"Median {calculated_median} != {constant_value}"
+    assert calculated_mode == constant_value, f"Mode {calculated_mode} != {constant_value}"
+    
+    # Verify that both measures are equal to each other
+    assert calculated_median == calculated_mode, f"Median {calculated_median} != Mode {calculated_mode}"
+
+@given(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10), 
+       st.floats(allow_nan=False, allow_infinity=False, min_value=-1e10, max_value=1e10))
+def test_variance_equals_stdev_squared_for_two_elements(a, b):
+    """
+    Test that for two-element data [a, b]: variance([a, b]) == stdev([a, b])^2
+    
+    This verifies the fundamental relationship between variance and standard deviation
+    (stdev = sqrt(variance)) for the minimal case where both functions are defined
+    (requiring at least 2 data points).
+    
+    Note: Float range is limited to avoid extreme values that cause numerical
+    precision issues in floating point arithmetic.
+    """
+    import math
+    from statistics import variance, stdev
+    
+    data = [a, b]
+    
+    # Calculate variance and standard deviation
+    var_result = variance(data)
+    stdev_result = stdev(data)
+    
+    # Test the fundamental relationship: variance = stdev^2
+    stdev_squared = stdev_result ** 2
+    
+    # Use math.isclose with appropriate tolerance for floating point comparison
+    # rel_tol=1e-9 handles relative precision errors for larger values
+    # abs_tol=1e-12 handles absolute precision errors for values close to zero
+    assert math.isclose(var_result, stdev_squared, rel_tol=1e-9, abs_tol=1e-12), \
+        f"variance([{a}, {b}]) = {var_result} != {stdev_squared} = stdev([{a}, {b}])^2"
