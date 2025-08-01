@@ -1,0 +1,2 @@
+- improve prompts
+- standardize how function information is obtained and sent to prompts
