@@ -24,25 +24,27 @@ def parse_test_functions(test_file: str) -> list[dict]:
 
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
-            # Find decorators by looking backwards from the function definition
-            func_start_line = node.lineno - 1  # ast uses 1-based line numbers
+            # Use AST to get decorator start line (handles multi-line decorators properly)
+            if node.decorator_list:
+                # First decorator's line number (1-indexed)
+                actual_start_line = node.decorator_list[0].lineno - 1
+            else:
+                # No decorators, start from function definition
+                actual_start_line = node.lineno - 1
 
-            # Look backwards to find decorators/comments that belong to this function
-            actual_start_line = func_start_line
-            for i in range(func_start_line - 1, -1, -1):
+            # Look backwards from actual_start_line to include comments/docstrings before decorators
+            for i in range(actual_start_line - 1, -1, -1):
                 line = content_lines[i].strip()
-                # Include decorators, docstrings, comments, and empty lines
-                if (line.startswith('@') or  # Decorators like @given
-                    line.startswith('#') or   # Comments
+                if (line.startswith('#') or   # Comments
                     line == '' or            # Empty lines
                     line.startswith('"""') or line.startswith("'''") or  # Docstrings
                     line.endswith('"""') or line.endswith("'''")):     # End of docstrings
                     actual_start_line = i
-                elif line and not line.startswith(' '):  # Hit another top-level statement
+                elif line:  # Hit non-empty, non-comment line
                     break
 
             # End of function
-            end_line = node.end_lineno if hasattr(node, 'end_lineno') else func_start_line + 10
+            end_line = node.end_lineno if hasattr(node, 'end_lineno') else node.lineno + 10
 
             source_lines = content_lines[actual_start_line:end_line]
             source_code = '\n'.join(source_lines)
