@@ -3,7 +3,7 @@ import json
 import asyncio
 from utils import (
     run_async_with_progress,
-    run_pytest_and_parse,
+    pytest_report,
     parse_test_functions
 )
 from constants import DEFAULT_MODEL, DEFAULT_MAX_CONCURRENT_REQUESTS
@@ -18,22 +18,11 @@ async def _review_single_test(test_info: dict, pytest_result: dict, model_name: 
     """
     model = llm.get_async_model(model_name)
 
-    # Build context from pytest results
-    status = pytest_result.get('status', 'UNKNOWN')
-    failure_message = pytest_result.get('failure_message', '').strip()
-
-    if status == 'PASSED':
-        pytest_context = "✅ This test PASSED successfully."
-    elif status == 'FAILED':
-        pytest_context = f"❌ This test FAILED.\n\nFailure details:\n{failure_message}"
-    elif status == 'ERROR':
-        pytest_context = f"💥 This test had an ERROR.\n\nError details:\n{failure_message}"
-    else:
-        pytest_context = "⚠️ Test status unknown - no pytest results available."
-
     prompt = REVIEW_SINGLE_TEST_PROMPT.format(
         test_source_code=test_info['source_code'],
-        pytest_results=pytest_context)
+        test_status=pytest_result.get('status', 'UNKNOWN'),
+        falsifying_example=pytest_result.get('falsifying_example', ''),
+        error_message=pytest_result.get('error_message', ''))
 
     schema = {
         "type": "object",
@@ -69,13 +58,10 @@ def review(test_file: str,
         print(f"Running pytest on {test_file}...")
 
     # Run pytest and get results
-    pytest_results = run_pytest_and_parse(test_file)
+    report, counts = pytest_report(test_file, return_counts=True)
 
     if not quiet:
-        passed = sum(1 for r in pytest_results.values() if r['status'] == 'PASSED')
-        failed = sum(1 for r in pytest_results.values() if r['status'] == 'FAILED')
-        errors = sum(1 for r in pytest_results.values() if r['status'] == 'ERROR')
-        print(f"Pytest results: {passed} passed, {failed} failed, {errors} errors")
+        print(f"Pytest results: {counts['pass']} passed, {counts['fail']} failed, {counts['error']} errors")
 
     # Parse test functions from file
     test_functions = parse_test_functions(test_file)
@@ -86,7 +72,7 @@ def review(test_file: str,
     # Review each test function with its pytest result
     async def run_review(test_info):
         func_name = test_info['name']
-        pytest_result = pytest_results.get(func_name, {'status': 'UNKNOWN'})
+        pytest_result = report.get(func_name, {'status': 'UNKNOWN'})
         return await _review_single_test(test_info, pytest_result, model_name)
 
     reviews_list = asyncio.run(run_async_with_progress(

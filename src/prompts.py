@@ -142,8 +142,13 @@ Review this Hypothesis property-based test:
 {{test_source_code}}
 ```
 
-Test Results:
-{{pytest_results}}
+# Test Results
+
+Status: {{test_status}}
+Falsifying example:
+{{falsifying_example}}
+Error message:
+{{error_message}}
 
 Analyze this test result carefully:
 
