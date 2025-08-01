@@ -22,77 +22,68 @@ You must write precise and robust tests. Here are some bad practices and their g
 # prompts for suggesting properties
 
 SUGGEST_SINGLE_FUNCTION_PROPERTIES = f"""
-Identify the most important properties to test this function's correctness.
+You are an expert property-based tester.
 
-Function: {{function_name}}
+# Task
+
+Propose the **most important, testable properties** for the function below.
+
+# Rules
+- Base every property on behaviour evident from the source / docstring.
+- No probabilistic, statistical, or domain-external claims.
+- Prioritise definitions, edge-cases, invariants, and algebraic laws.
+- Do not propose properties that are based on esoteric theoretical domain-specific properties.
+- Rate confidence as: certain | high | medium | low | uncertain.
+
+# Important single-function properties
+- **Idempotence**: `set(set(xs)) == set(xs)`
+- **Double reverse**: `reverse(reverse(xs)) == xs`
+- **Length invariant**: `len(sorted(xs)) == len(xs)`
+- **Bounded output**: `min(xs) ≤ median(xs) ≤ max(xs)`
+- **Monotonicity**: for positive `x < y`, `log(x) < log(y)`
+- **Commutativity**: `gcd(a, b) == gcd(b, a)`
+- **Associativity**: `max(max(a, b), c) == max(a, max(b, c))`
+- **Neutral element**: `max(a, -inf) == a`
+- **Error condition**: `sqrt(x)` raises `ValueError` when `x < 0`
+
+# Function: {{function_name}}
+
 Signature: {{function_signature}}
 Docstring: {{function_docstring}}
-
 Source code:
+```python
 {{function_source}}
-
-Please identify properties this function should satisfy. For each property:
-1. Express it clearly (using mathematical notation when appropriate)
-2. Explain your reasoning for why this property should hold
-3. Rate your confidence as: certain, high, medium, low, or uncertain
-
-Examples of properties:
-- Mathematical relationships (commutativity, associativity, etc.)
-- Invariants (bounds, constraints)
-- Identity properties
-- Monotonicity
-- Edge case behaviors
-
-It is NOT necessary to list all properties. Focus on the MOST IMPORTANT properties that would catch bugs.
-
-Be specific and testable in your property descriptions.
-
-Also output confidence level as:
-- "certain" only for mathematical definitions
-- "high" for well-established patterns
-- "medium" for likely but not guaranteed properties
-- "low" for speculative properties
-- "uncertain" when you're unsure
 """
 
-SUGGEST_MULTI_FUNCTION_PROPERTIES = f"""
-Analyze these functions together and identify mathematical/logical properties that involve relationships between multiple functions.
+SUGGEST_MULTI_FUNCTION_PROPERTIES = """
+You are an expert property-based tester.
 
-Functions:
-{{function_infos}}
+Task: propose up to **6 key, testable properties** that relate two or more of the functions below.
 
-Please identify properties that involve relationships between these functions. For each property:
-1. Express it clearly (using mathematical notation when appropriate)
-2. Explain your reasoning for why this property should hold
-3. List which functions are involved in this property
-4. Rate your confidence as: certain, high, medium, low, or uncertain
+# Rules
+- Each property must reference **≥ 2 distinct functions**.
+- Use behaviour evident from the source / docstrings only.
+- No probabilistic, statistical, or deep domain-specific claims.
+- Prioritise inverses, composition, shared invariants, algebraic or symmetry relations, and domain/range consistency.
+- Rate confidence as: certain | high | medium | low | uncertain.
 
-Focus on multi-function relationships like:
-- Inverse relationships (f(g(x)) = x)
-- Compositional properties
-- Algebraic relationships (f(x) + g(x), f(x) * g(x))
-- Domain/range relationships
-- Symmetry relationships
-- Functional equations involving multiple functions
+# Important multi-function properties
+- **Round-trip**: `parse_json(dumps_json(x)) == x`
+- **Equivalent paths**: `f(g(x)) == g(f(x))`
 
-Only include properties that genuinely involve multiple functions working together. Ignore single-function properties.
+Functions provided:
+{function_infos}
 
-Be specific and testable in your property descriptions.
-Also output confidence level as:
-- "certain" only for mathematical definitions
-- "high" for well-established patterns
-- "medium" for likely but not guaranteed properties
-- "low" for speculative properties
-- "uncertain" when you're unsure.
+Return the properties in the required schema only—no extra text.
 """
-
 
 # prompts for writing tests (from scratch)
 
 WRITING_SINGLE_FUNCTION_PROPERTIES = f"""
 Generate `hypothesis` test code for testing these properties of {{function_name}} from {{module_name}}.
 
-# Function Information:
+# Function Information
+
 Name: {{function_name}}
 Signature: {{function_signature}}
 Docstring: {{function_docstring}}

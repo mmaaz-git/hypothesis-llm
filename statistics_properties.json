@@ -1,0 +1,149 @@
+{
+  "module_name": "statistics",
+  "single_function_properties": {
+    "mean": [
+      {
+        "property": "Error condition: mean([]) raises StatisticsError",
+        "reasoning": "The docstring explicitly states 'If data is empty, StatisticsError will be raised' and the source code shows 'if n < 1: raise StatisticsError'. This is a clear error condition that must be tested.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Bounded output: min(data) \u2264 mean(data) \u2264 max(data) for non-empty data",
+        "reasoning": "The arithmetic mean is mathematically guaranteed to lie between the minimum and maximum values of the input data. This is a fundamental invariant of the mean function that holds for any numeric type.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Single element invariant: mean([x]) == x for any numeric x",
+        "reasoning": "When the data contains only one element, the arithmetic mean must equal that element. This is evident from the mathematical definition (sum/count = x/1 = x) and tests the base case behavior.",
+        "confidence": "certain"
+      }
+    ],
+    "median": [
+      {
+        "property": "Bounded output: min(data) \u2264 median(data) \u2264 max(data)",
+        "reasoning": "The median function returns either a middle element (for odd-length data) or the average of two middle elements (for even-length data). Since the data is sorted internally, any middle element must be between the minimum and maximum values. For even-length data, the average of two consecutive elements in a sorted list also falls within the range [min, max]. This is a fundamental mathematical property of medians.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Empty data error condition: median([]) raises StatisticsError",
+        "reasoning": "The source code explicitly checks if n == 0 and raises StatisticsError with the message 'no median for empty data'. This is a clear error condition that can be directly verified from the implementation.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Order invariance: median(data) == median(reversed(data)) == median(shuffled(data))",
+        "reasoning": "The function internally sorts the data before computing the median, so the input order should not affect the result. Whether the input is sorted, reverse-sorted, or randomly shuffled, the median should be identical since sorting normalizes the order. This tests that the function properly handles different input orderings.",
+        "confidence": "high"
+      }
+    ],
+    "mode": [
+      {
+        "property": "mode(data) raises StatisticsError when data is empty",
+        "reasoning": "The docstring explicitly states 'If *data* is empty, mode raises StatisticsError' and the source code shows this behavior with 'raise StatisticsError('no mode for empty data') from None' when IndexError is caught from accessing pairs[0][0] on an empty list.",
+        "confidence": "certain"
+      },
+      {
+        "property": "mode(data) returns an element that exists in data (when data is non-empty)",
+        "reasoning": "The function uses Counter to count frequencies and returns pairs[0][0] which is the most frequent element. Since Counter only counts existing elements, the returned value must be from the input data. This is a fundamental invariant - the mode must be a member of the dataset.",
+        "confidence": "certain"
+      },
+      {
+        "property": "For data with tied frequencies, mode(data) returns the first encountered element among the tied modes",
+        "reasoning": "The docstring explicitly demonstrates this with the example mode(['red', 'red', 'green', 'blue', 'blue']) returning 'red'. Counter.most_common(1) preserves insertion order when frequencies are equal, and since Counter uses iteration order from iter(data), the first encountered element among ties will be returned.",
+        "confidence": "high"
+      }
+    ],
+    "stdev": [
+      {
+        "property": "Non-negativity: stdev(data) >= 0 for all valid data",
+        "reasoning": "Standard deviation is defined as the square root of variance, and square roots of non-negative real numbers are always non-negative. Since variance is always non-negative (sum of squared deviations), the standard deviation must be non-negative. This is a fundamental mathematical invariant.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Error condition: stdev(data) raises StatisticsError when len(data) < 2",
+        "reasoning": "The source code explicitly checks 'if n < 2:' and raises StatisticsError with message 'stdev requires at least two data points'. This is directly observable from the implementation and is a clear precondition violation that should be testable.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Scale invariance relationship: stdev([k*x for x in data]) == abs(k) * stdev(data) for scalar k != 0",
+        "reasoning": "Standard deviation has the mathematical property that scaling all data points by a constant k scales the standard deviation by |k|. This follows from the definition: if variance scales by k\u00b2, then standard deviation (square root of variance) scales by |k|. This is a fundamental algebraic property of standard deviation.",
+        "confidence": "high"
+      }
+    ],
+    "variance": [
+      {
+        "property": "Non-negative output: variance(data) >= 0 for all valid data",
+        "reasoning": "Variance is mathematically defined as the average of squared deviations from the mean. Since squares are always non-negative, the variance must be non-negative. This is a fundamental mathematical invariant that should hold for any correct implementation.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Mean consistency: variance(data, xbar) == variance(data) when xbar == mean(data)",
+        "reasoning": "The docstring explicitly states that when xbar is provided, it should be the mean of the data to get correct results. When the correct mean is provided, the result should be identical to when the mean is calculated automatically. This tests the core equivalence of the two computation paths.",
+        "confidence": "certain"
+      },
+      {
+        "property": "Error condition: variance(data) raises StatisticsError when len(data) < 2",
+        "reasoning": "The docstring states 'data should be an iterable of Real-valued numbers, with at least two values' and the source code explicitly checks 'if n < 2: raise StatisticsError'. This is a clear precondition that must be enforced for the function to behave correctly.",
+        "confidence": "certain"
+      }
+    ]
+  },
+  "multi_function_properties": [
+    {
+      "property": "stdev(data) == sqrt(variance(data))",
+      "reasoning": "Standard deviation is defined as the square root of variance. The stdev docstring explicitly states 'Return the square root of the sample variance' and references the variance function for details.",
+      "functions_involved": [
+        "stdev",
+        "variance"
+      ],
+      "confidence": "certain"
+    },
+    {
+      "property": "variance(data, mean(data)) == variance(data)",
+      "reasoning": "The variance function accepts an optional xbar parameter which should be the mean of the data. The docstring shows that variance(data, m) where m = mean(data) produces the same result as variance(data).",
+      "functions_involved": [
+        "variance",
+        "mean"
+      ],
+      "confidence": "certain"
+    },
+    {
+      "property": "stdev(data) == sqrt(variance(data, mean(data)))",
+      "reasoning": "Combining the relationship between stdev and variance with the ability to pass the mean to variance. Since stdev is the square root of variance, and variance can accept the mean as a parameter, this composition should hold.",
+      "functions_involved": [
+        "stdev",
+        "variance",
+        "mean"
+      ],
+      "confidence": "high"
+    },
+    {
+      "property": "For constant data [x, x, ..., x]: mean(data) == median(data) == mode(data) == x",
+      "reasoning": "When all elements in the dataset are identical, all measures of central tendency should equal that constant value. Mean sums identical values and divides by count, median finds the middle (which is the same value), and mode finds the most frequent (which is the only value).",
+      "functions_involved": [
+        "mean",
+        "median",
+        "mode"
+      ],
+      "confidence": "high"
+    },
+    {
+      "property": "For constant data [x, x, ..., x] with at least 2 elements: variance(data) == 0 and stdev(data) == 0",
+      "reasoning": "Variance measures spread around the mean. When all values are identical, there is no spread, so variance should be zero. Since standard deviation is the square root of variance, it should also be zero for constant data.",
+      "functions_involved": [
+        "variance",
+        "stdev"
+      ],
+      "confidence": "high"
+    },
+    {
+      "property": "For single-element data [x]: mean(data) == median(data) == mode(data) == x",
+      "reasoning": "With only one data point, the mean (sum/count), median (middle value), and mode (most frequent) must all equal that single value. All three functions should handle single-element data consistently.",
+      "functions_involved": [
+        "mean",
+        "median",
+        "mode"
+      ],
+      "confidence": "medium"
+    }
+  ]
+}
