@@ -9,6 +9,8 @@ In order to write good tests, you must follow these stylistic guidelines:
 3. Add clear comments or docstrings explaining the properties being tested so that a human can review your work.
 4. Handle edge cases and potential exceptions appropriately.
 5. Use descriptive test method names that describe the property being tested.
+6. Use `pytest.raises` to test for exceptions (import `pytest` if you need it).
+7. If you need a single test case, use `@given(st.just(x))`.
 
 You must write precise and robust tests. Here are some bad practices and their good alternatives:
 | Bad Practice | Good Alternative |
@@ -16,7 +18,7 @@ You must write precise and robust tests. Here are some bad practices and their g
 | `st.data()` | Use a proper strategy. Only use `st.data()` if it is necessary for a complex strategy. |
 | `assume()` | Use a proper strategy, or chain it with .filter() or .map() |
 | `st.floats()` if you are generating floats that will be compared | Use `st.floats(allow_nan=False, allow_infinity=False)` because, by default, `nan` is not equal to itself and `inf` may overflow. |
-| Use exact equality when comparing floats | Use `numpy.isclose()` or `numpy.allclose()` or `math.isclose()` |
+| Use `==` when comparing floats | Use `numpy.isclose()` or `numpy.allclose()` or `math.isclose()` |
 """
 
 # prompts for suggesting properties
@@ -150,35 +152,19 @@ Falsifying example:
 Error message:
 {{error_message}}
 
-Analyze this test result carefully:
+REFLECT carefully on the test results.
 
-If the test PASSED:
-- Mark okay=false if you see ANY of these issues:
-  * Uses exact equality (==) for floating-point comparisons
-  * Missing @given decorators or strategy definitions
-  * Uses random.shuffle() or other non-deterministic operations
-  * Missing imports inside test functions
-  * Tests incorrect mathematical properties
-  * Not actually property-based (just hardcoded values)
-- Mark okay=true ONLY if test is genuinely well-written with proper tolerances
+If the test status is PASS:
+- Look at the test code and ensure it is well-written.
+- Ensure that it is passing for the right reasons, and not due to, e.g., being too lenient
+- If you suggest a fix, make sure that you are not introducing a new issue
 
-If the test FAILED or ERROR:
-- REFLECT on if this demonstrates a genuine bug in the code in the code being tested (mark okay=true, explain in issue)
-- Or if there's a problem with the TEST ITSELF (mark okay=false, suggest fix)
-
-Common TEST problems to look for:
-- Uses == instead of math.isclose() for floating-point comparisons
-- Strategy generates invalid values (overflow, NaN, undefined names)
-- Assertion tolerance too strict/loose for floating point
-- Missing imports or syntax errors
-- Missing @given decorators
-- Uses random.shuffle() instead of deterministic alternatives
-- Incorrect property logic
-
-Common signs of GENUINE BUGS:
-- Test logic looks correct but implementation doesn't match expected behavior
-- Property should mathematically hold but fails on valid inputs
-- Error messages suggest implementation issues
+If the test status is FAIL or ERROR:
+- Examine the falsifying example
+- Examine the error message
+- Think: is this a true, genuine bug in the code?
+- Or, is it an issue with how the test is written?
+- Is the test testing an incorrect property? Is it running into issues due to an incorrect strategy?
 
 You may assume that the following imports are available:
 ```python
@@ -189,6 +175,13 @@ and the function(s) being tested.
 
 # Guidelines for good test code:
 {WRITING_TEST_GUIDELINES}
+
+# Output format
+
+For this test, you will output:
+- "okay": if you think the test is okay as-is, then output true. otherwise, output false.
+- "issue": if you don't think the test is okay, then explain what you think is the issue, so that a human can review it.
+- "fix": if you don't think the test is okay, then suggest a fix that would remedy the issue, so that another programmer can fix it. Do not suggest fixes that introduce new issues.
 """
 
 # prompts for improving tests
@@ -209,14 +202,12 @@ You may assume that the following imports are available:
 import hypothesis
 from hypothesis import given, strategies as st
 ```
-and the function(s) being tested. For example, if you are testing `mean`, you may assume that `from statistics import mean` is available.
+and the function(s) being tested.
 
-Make the MINIMAL fix needed. Rules:
-1. Keep same function name and exact structure
-2. If fixing floating-point comparison: ONLY change == to math.isclose()
-3. If fixing random.shuffle(): ONLY replace with deterministic alternative
-4. If fixing missing import: ONLY add the missing import
-5. Don't change anything else - no "improvements" or refactoring
-6. One change at a time - if fix suggests multiple things, pick one
+You must make the necessary fixes to fix the issue. Use the suggested fix as a guide.
 
-Return ONLY the fixed function code:"""
+# Guidelines for good test code:
+{WRITING_TEST_GUIDELINES}
+
+Output the ENTIRE improved test function code.
+"""
