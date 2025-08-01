@@ -22,7 +22,7 @@ You must write precise and robust tests. Here are some bad practices and their g
 # prompts for suggesting properties
 
 SUGGEST_SINGLE_FUNCTION_PROPERTIES = f"""
-Analyze this function and identify mathematical/logical properties it should satisfy.
+Identify the most important properties to test this function's correctness.
 
 Function: {{function_name}}
 Signature: {{function_signature}}
@@ -36,14 +36,17 @@ Please identify properties this function should satisfy. For each property:
 2. Explain your reasoning for why this property should hold
 3. Rate your confidence as: certain, high, medium, low, or uncertain
 
-Focus on properties like:
+Examples of properties:
 - Mathematical relationships (commutativity, associativity, etc.)
 - Invariants (bounds, constraints)
 - Identity properties
 - Monotonicity
 - Edge case behaviors
 
+It is NOT necessary to list all properties. Focus on the MOST IMPORTANT properties that would catch bugs.
+
 Be specific and testable in your property descriptions.
+
 Also output confidence level as:
 - "certain" only for mathematical definitions
 - "high" for well-established patterns
@@ -52,7 +55,8 @@ Also output confidence level as:
 - "uncertain" when you're unsure
 """
 
-SUGGEST_MULTI_FUNCTION_PROPERTIES = f"""Analyze these functions together and identify mathematical/logical properties that involve relationships between multiple functions.
+SUGGEST_MULTI_FUNCTION_PROPERTIES = f"""
+Analyze these functions together and identify mathematical/logical properties that involve relationships between multiple functions.
 
 Functions:
 {{function_infos}}
@@ -153,17 +157,26 @@ Test Results:
 Analyze this test result carefully:
 
 If the test PASSED:
-- Mark okay=true if the test looks well-written
-- Mark okay=false if you see issues with the test code itself
+- Mark okay=false if you see ANY of these issues:
+  * Uses exact equality (==) for floating-point comparisons
+  * Missing @given decorators or strategy definitions
+  * Uses random.shuffle() or other non-deterministic operations
+  * Missing imports inside test functions
+  * Tests incorrect mathematical properties
+  * Not actually property-based (just hardcoded values)
+- Mark okay=true ONLY if test is genuinely well-written with proper tolerances
 
 If the test FAILED or ERROR:
 - Consider if this might be a GENUINE BUG in the code being tested (mark okay=true, explain in issue)
 - Or if there's a problem with the TEST ITSELF (mark okay=false, suggest fix)
 
 Common TEST problems to look for:
+- Uses == instead of math.isclose() for floating-point comparisons
 - Strategy generates invalid values (overflow, NaN, undefined names)
 - Assertion tolerance too strict/loose for floating point
 - Missing imports or syntax errors
+- Missing @given decorators
+- Uses random.shuffle() instead of deterministic alternatives
 - Incorrect property logic
 
 Common signs of GENUINE BUGS:
@@ -177,6 +190,9 @@ import hypothesis
 from hypothesis import given, strategies as st
 ```
 and the function(s) being tested.
+
+# Guidelines for good test code:
+{WRITING_TEST_GUIDELINES}
 """
 
 # prompts for improving tests
@@ -199,14 +215,9 @@ from hypothesis import given, strategies as st
 ```
 and the function(s) being tested. For example, if you are testing `mean`, you may assume that `from statistics import mean` is available.
 
-Rewrite the function with the fix applied. Make sure to:
-1. Keep the same function name and basic structure
-2. Apply the specific fix mentioned above
-3. Ensure the test logic remains sound
-4. Use appropriate Hypothesis strategies
-5. If any additional imports are needed, you MUST import them in the function
+Apply the specific fix suggested above. Requirements:
+1. Keep the same function name
+2. If you need imports, put them at the TOP of your output
+3. Apply ONLY the fix described - don't make other changes
 
-# Guidelines for good test code:
-{WRITING_TEST_GUIDELINES}
-
-Return only the fixed function code, no extra text or markdown:"""
+Return ONLY the fixed function code:"""
