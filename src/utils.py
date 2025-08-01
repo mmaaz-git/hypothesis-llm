@@ -63,7 +63,7 @@ def run_pytest_and_parse(test_file: str) -> dict:
     """
     # Run pytest with detailed output
     result = subprocess.run([
-        'pytest', test_file, '-v', '--tb=short', '--no-header'
+        'pytest', test_file, '-v', '--tb=long', '--no-header', '--no-summary'
     ], capture_output=True, text=True)
 
     test_results = {}
@@ -75,8 +75,7 @@ def run_pytest_and_parse(test_file: str) -> dict:
         file_name, func_name, status = match.groups()
         test_results[func_name] = {
             'status': status,
-            'failure_message': '',
-            'falsifying_example': ''
+            'failure_message': ''
         }
 
     # Parse failure details if any failures occurred
@@ -92,39 +91,40 @@ def parse_failure_details(test_results: dict, output: str) -> dict:
     lines = output.split('\n')
     current_test = None
     in_failure_section = False
+    failure_lines = []
 
     for i, line in enumerate(lines):
         # Look for failure headers like "_____________ test_function_name _____________"
         if line.startswith('_') and any(test_name in line for test_name in test_results.keys()):
+            # Save previous test's failure if any
+            if current_test and failure_lines:
+                test_results[current_test]['failure_message'] = '\n'.join(failure_lines)
+                failure_lines = []
+
             for test_name in test_results.keys():
                 if test_name in line:
                     current_test = test_name
                     in_failure_section = True
                     break
 
-        # Look for assertion errors
-        elif current_test and line.startswith('E '):
-            if not test_results[current_test]['failure_message']:
-                test_results[current_test]['failure_message'] = line[2:]  # Remove 'E '
-            else:
-                test_results[current_test]['failure_message'] += '\n' + line[2:]
-
-        # Look for falsifying examples
-        elif current_test and 'Falsifying example:' in line:
-            # Capture the falsifying example (usually spans multiple lines)
-            example_lines = [line]
-            j = i + 1
-            while j < len(lines) and (lines[j].startswith(' ') or '=' in lines[j] and lines[j].count('=') > 10):
-                if lines[j].count('=') > 10:  # End of section
-                    break
-                example_lines.append(lines[j])
-                j += 1
-            test_results[current_test]['falsifying_example'] = '\n'.join(example_lines)
+        # Capture all failure content between test headers
+        elif current_test and in_failure_section:
+            # Don't capture the divider lines
+            if not (line.startswith('=') and line.count('=') > 10):
+                failure_lines.append(line)
 
         # Reset when we hit next section
         elif line.startswith('=') and line.count('=') > 10:
+            # Save current test's failure
+            if current_test and failure_lines:
+                test_results[current_test]['failure_message'] = '\n'.join(failure_lines)
+                failure_lines = []
             current_test = None
             in_failure_section = False
+
+    # Save final test's failure
+    if current_test and failure_lines:
+        test_results[current_test]['failure_message'] = '\n'.join(failure_lines)
 
     return test_results
 
