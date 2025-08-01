@@ -205,6 +205,7 @@ from hypothesis import given, strategies as st
 and the function(s) being tested.
 
 You must make the necessary fixes to fix the issue. Use the suggested fix as a guide.
+Any new imports MUST be added to the test function, or above the test function. This is extremely important.
 
 # Guidelines for good test code:
 {WRITING_TEST_GUIDELINES}
